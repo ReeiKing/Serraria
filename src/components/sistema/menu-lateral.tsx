@@ -9,7 +9,15 @@ import { cn } from "@/lib/utils"
 
 import { MENU } from "./navegacao"
 
-export function MenuLateral({ aoNavegar }: { aoNavegar?: () => void }) {
+export type Contadores = { orcamentos?: number }
+
+export function MenuLateral({
+  aoNavegar,
+  contadores = {},
+}: {
+  aoNavegar?: () => void
+  contadores?: Contadores
+}) {
   const pathname = usePathname()
 
   return (
@@ -57,6 +65,21 @@ export function MenuLateral({ aoNavegar }: { aoNavegar?: () => void }) {
             )}
             <Icone className="relative size-4" aria-hidden />
             <span className="relative">{item.titulo}</span>
+            {item.contador && !!contadores[item.contador] && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className={cn(
+                  "relative ml-auto flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold",
+                  ativo
+                    ? "bg-primary-foreground text-primary"
+                    : "bg-primary text-primary-foreground"
+                )}
+                aria-label={`${contadores[item.contador]} novos`}
+              >
+                {contadores[item.contador]}
+              </motion.span>
+            )}
           </Link>
         )
       })}

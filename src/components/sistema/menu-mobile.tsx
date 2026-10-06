@@ -6,9 +6,15 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 
-import { MenuLateral } from "./menu-lateral"
+import { MenuLateral, type Contadores } from "./menu-lateral"
 
-export function MenuMobile({ nomeEmpresa }: { nomeEmpresa: string }) {
+export function MenuMobile({
+  nomeEmpresa,
+  contadores,
+}: {
+  nomeEmpresa: string
+  contadores?: Contadores
+}) {
   const [aberto, setAberto] = useState(false)
 
   return (
@@ -22,7 +28,7 @@ export function MenuMobile({ nomeEmpresa }: { nomeEmpresa: string }) {
         <SheetHeader className="px-0">
           <SheetTitle className="font-heading text-lg">{nomeEmpresa}</SheetTitle>
         </SheetHeader>
-        <MenuLateral aoNavegar={() => setAberto(false)} />
+        <MenuLateral aoNavegar={() => setAberto(false)} contadores={contadores} />
       </SheetContent>
     </Sheet>
   )

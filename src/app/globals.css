@@ -74,11 +74,17 @@
   --floresta: oklch(0.45 0.08 150);
   --floresta-foreground: oklch(0.98 0.01 150);
   --alerta: oklch(0.75 0.15 75);
-  --chart-1: oklch(0.47 0.09 52);
-  --chart-2: oklch(0.5 0.09 150);
-  --chart-3: oklch(0.7 0.12 75);
-  --chart-4: oklch(0.6 0.08 30);
-  --chart-5: oklch(0.38 0.05 60);
+  /* Gráficos: paleta categórica validada (CVD/contraste) — ordem fixa:
+     1 madeira (Pinus, vendas) · 2 floresta (Eucalipto) · 3 azul (compras) · 4 âmbar */
+  --chart-1: #b4541a;
+  --chart-2: #178a75;
+  --chart-3: #4f6fd6;
+  --chart-4: #b8860b;
+  /* rampa sequencial (qualidade 1ª → 3ª) */
+  --chart-seq-1: #7a3b12;
+  --chart-seq-2: #b4541a;
+  --chart-seq-3: #e0a172;
+  --chart-5: #8a7a6a;
   --radius: 0.625rem;
   --sidebar: oklch(0.965 0.014 78);
   --sidebar-foreground: oklch(0.23 0.03 50);
@@ -112,11 +118,14 @@
   --floresta: oklch(0.65 0.1 150);
   --floresta-foreground: oklch(0.18 0.02 150);
   --alerta: oklch(0.8 0.14 80);
-  --chart-1: oklch(0.74 0.1 65);
-  --chart-2: oklch(0.68 0.1 150);
-  --chart-3: oklch(0.82 0.12 85);
-  --chart-4: oklch(0.68 0.1 35);
-  --chart-5: oklch(0.58 0.05 60);
+  --chart-1: #d06a2c;
+  --chart-2: #249c80;
+  --chart-3: #7186e8;
+  --chart-4: #b38419;
+  --chart-seq-1: #f0b48a;
+  --chart-seq-2: #d06a2c;
+  --chart-seq-3: #8a4218;
+  --chart-5: #a89886;
   --sidebar: oklch(0.2 0.015 52);
   --sidebar-foreground: oklch(0.95 0.012 78);
   --sidebar-primary: oklch(0.74 0.1 65);

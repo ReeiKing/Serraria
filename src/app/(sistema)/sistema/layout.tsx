@@ -8,6 +8,8 @@ import { MenuMobile } from "@/components/sistema/menu-mobile"
 import { MenuUsuario } from "@/components/sistema/menu-usuario"
 import { TransicaoPagina } from "@/components/sistema/transicao-pagina"
 import { siteConfig } from "@/config/site"
+import { comUsuario, orcamentosSite } from "@/db"
+import { eq, sql } from "drizzle-orm"
 import { exigirUsuario } from "@/lib/auth/sessao"
 
 export const metadata: Metadata = {
@@ -17,6 +19,13 @@ export const metadata: Metadata = {
 
 export default async function SistemaLayout({ children }: { children: React.ReactNode }) {
   const usuario = await exigirUsuario()
+  const [{ novos }] = await comUsuario((tx) =>
+    tx
+      .select({ novos: sql<number>`count(*)::int` })
+      .from(orcamentosSite)
+      .where(eq(orcamentosSite.status, "novo"))
+  )
+  const contadores = { orcamentos: novos }
 
   return (
     <div className="flex min-h-dvh">
@@ -27,12 +36,12 @@ export default async function SistemaLayout({ children }: { children: React.Reac
             {siteConfig.nome}
           </span>
         </Link>
-        <MenuLateral />
+        <MenuLateral contadores={contadores} />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="bg-background/80 sticky top-0 z-30 flex h-14 items-center gap-2 border-b px-4 backdrop-blur">
-          <MenuMobile nomeEmpresa={siteConfig.nome} />
+          <MenuMobile nomeEmpresa={siteConfig.nome} contadores={contadores} />
           <div className="ml-auto flex items-center gap-1">
             <AlternarTema />
             <MenuUsuario nome={usuario.nome} email={usuario.email} />

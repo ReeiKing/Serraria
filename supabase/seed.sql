@@ -33,6 +33,23 @@ values (gen_random_uuid(), '00000000-0000-0000-0000-000000000001', '00000000-000
   '{"sub": "00000000-0000-0000-0000-000000000001", "email": "secretaria@madeireira.local", "email_verified": true}'::jsonb,
   'email', now(), now(), now());
 
+-- Segundo usuário (senha: madeira123) — aparece na auditoria dos dados de exemplo
+insert into auth.users (
+  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+  confirmation_token, recovery_token, email_change_token_new, email_change
+) values (
+  '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000002',
+  'authenticated', 'authenticated', 'gerente@madeireira.local',
+  extensions.crypt('madeira123', extensions.gen_salt('bf')), now(),
+  '{"provider": "email", "providers": ["email"], "nome": "Carlos Mendes"}'::jsonb,
+  '{}'::jsonb, now(), now(), '', '', '', ''
+);
+insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+values (gen_random_uuid(), '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000002',
+  '{"sub": "00000000-0000-0000-0000-000000000002", "email": "gerente@madeireira.local", "email_verified": true}'::jsonb,
+  'email', now(), now(), now());
+
 -- Preços iniciais de exemplo
 insert into public.tabela_precos (tipo, especie_id, qualidade_id, unidade, valor, vigencia_inicio)
 select 'compra_tora', e.id, null, 'm3', case e.nome when 'Pinus' then 150 else 130 end, current_date

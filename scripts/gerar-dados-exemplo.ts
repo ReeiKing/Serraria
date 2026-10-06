@@ -17,6 +17,18 @@ const r = () => ((semente = (semente * 16807) % 2147483647) - 1) / 2147483646
 const escolher = <T>(lista: T[]) => lista[Math.floor(r() * lista.length)]!
 const id = (prefixo: string, n: number) =>
   `${prefixo}0000000-0000-0000-0000-${String(n).padStart(12, "0")}`
+/**
+ * Datas relativas: os dados são gerados como se "agora" fosse AGORA_REF, mas o SQL grava
+ * `now() - intervalo`. Assim o sistema parece em uso até poucas horas antes da apresentação,
+ * em qualquer dia em que o banco for recriado.
+ */
+const AGORA_REF = new Date("2026-10-06T16:00:00-03:00").getTime()
+const atras = (ms: number) =>
+  `interval '${Math.max(0, Math.round((AGORA_REF - ms) / 1000))} seconds'`
+const tsql = (ms: number) => `(now() - ${atras(ms)})`
+const dsql = (ms: number) => `((now() - ${atras(ms)}) at time zone 'America/Sao_Paulo')::date`
+const GERENTE = "00000000-0000-0000-0000-000000000002"
+
 const q = (v: string | number | null) =>
   v === null ? "null" : typeof v === "number" ? String(v) : `'${v.replace(/'/g, "''")}'`
 
@@ -80,6 +92,13 @@ const fornecedores = [
     mun: "Palmeira",
     uf: "PR",
     tel: "42999110004",
+  },
+  {
+    nome: "Agroflorestal Imbituva Ltda",
+    doc: dvCnpj("161803390001"),
+    mun: "Imbituva",
+    uf: "PR",
+    tel: "42999110005",
   },
 ]
 fornecedores.forEach((f, i) =>
@@ -145,6 +164,62 @@ const clientes = [
     num: "s/n",
     bairro: "Zona Rural",
   },
+  {
+    razao: "Telhados & Estruturas Guarapuava Ltda",
+    fantasia: "TelhaForte",
+    doc: dvCnpj("334455660001"),
+    ie: "9056781234",
+    ind: 1,
+    mun: "Guarapuava",
+    ibge: "4109401",
+    uf: "PR",
+    cep: "85010000",
+    log: "Rua Saldanha Marinho",
+    num: "1500",
+    bairro: "Centro",
+  },
+  {
+    razao: "Embalagens Norte Paraná Ltda",
+    fantasia: "EmbalaNorte",
+    doc: dvCnpj("445566770001"),
+    ie: "9034567812",
+    ind: 1,
+    mun: "Londrina",
+    ibge: "4113700",
+    uf: "PR",
+    cep: "86010000",
+    log: "Av. Higienópolis",
+    num: "300",
+    bairro: "Centro",
+  },
+  {
+    razao: "Madeiras Serra Catarinense Ltda",
+    fantasia: "Serra Madeiras",
+    doc: dvCnpj("556677880001"),
+    ie: "2587413690",
+    ind: 1,
+    mun: "Lages",
+    ibge: "4209300",
+    uf: "SC",
+    cep: "88501000",
+    log: "Av. Marechal Floriano",
+    num: "720",
+    bairro: "Centro",
+  },
+  {
+    razao: "Construtora Campos Gerais Ltda",
+    fantasia: "CG Obras",
+    doc: dvCnpj("667788990001"),
+    ie: "9078123456",
+    ind: 1,
+    mun: "Telêmaco Borba",
+    ibge: "4127106",
+    uf: "PR",
+    cep: "84261000",
+    log: "Av. Chanceler Horácio Lafer",
+    num: "640",
+    bairro: "Centro",
+  },
 ]
 clientes.forEach((c, i) =>
   sql(
@@ -172,6 +247,7 @@ const motoristas = [
     tel: "42988770003",
     transp: "Transportes Lima",
   },
+  { nome: "José Aparecido Rocha", cpf: dvCpf("741852963"), cnh: "07418529630", tel: "42988770004" },
 ]
 motoristas.forEach((m, i) =>
   sql(
@@ -183,6 +259,7 @@ const veiculos = [
   { placa: "BRA2E19", tipo: "bitrem", tara: 18500, uf: "PR", mot: 1 },
   { placa: "MDE4F21", tipo: "truck", tara: 9800, uf: "PR", mot: 2 },
   { placa: "QWE1234", tipo: "carreta", tara: 15250, uf: "PR", mot: 3 },
+  { placa: "RTY5G67", tipo: "toco", tara: 7200, uf: "PR", mot: 4 },
 ]
 veiculos.forEach((v, i) =>
   sql(
@@ -195,6 +272,7 @@ sql("")
 sql("-- Datas históricas: o gatilho de carimbo é desligado só durante o seed.")
 sql("alter table public.entradas_toras disable trigger carimbo;")
 sql("alter table public.estoque_toras_mov disable trigger carimbo;")
+sql("alter table public.entradas_toras_itens disable trigger carimbo;")
 sql("alter table public.entradas_toras_pagamentos disable trigger carimbo;")
 
 const precos: Record<string, Record<string, number>> = {
@@ -235,36 +313,45 @@ for (let i = 0; i < N_ENTRADAS; i++) {
   const c = calcularEntrada(dados)
   const eid = id("5", i + 1)
   const fornecedor = id("1", 1 + Math.floor(r() * fornecedores.length))
-  const ts = quando.toISOString()
+  const ts = tsql(quando.getTime())
+  const autor = r() < 0.3 ? GERENTE : SECRETARIA
   const n = (x: unknown, casas: number) =>
     x === undefined ? "null" : q(paraNumeric(x as number, casas))
 
   sql(
-    `insert into public.entradas_toras (id, especie_id, fornecedor_id, motorista_id, veiculo_id, placa, origem, municipio_origem, uf_origem, modo_medicao, carga_comprimento_m, carga_largura_m, carga_altura_m, peso_bruto_kg, tara_kg, peso_liquido_kg, quantidade, unidade, valor_unitario, valor_total, created_at, updated_at, created_by) values (${q(eid)}, (select id from public.especies where nome = ${q(especie)}), ${q(fornecedor)}, ${q(id("3", v.mot))}, ${q(id("4", veiculo + 1))}, ${q(v.placa)}, ${q(`Talhão ${1 + Math.floor(r() * 12)}`)}, ${q(fornecedores[0]!.mun)}, 'PR', ${q(modo)}, ${n(dados.cargaComprimentoM, 3)}, ${n(dados.cargaLarguraM, 3)}, ${n(dados.cargaAlturaM, 3)}, ${n(dados.pesoBrutoKg, 2)}, ${n(dados.taraKg, 2)}, ${c.pesoLiquidoKg === null ? "null" : q(paraNumeric(c.pesoLiquidoKg, 2))}, ${q(paraNumeric(c.quantidade, 6))}, ${q(c.unidade)}, ${q(paraNumeric(preco, 2))}, ${q(paraNumeric(c.valorTotal, 2))}, ${q(ts)}, ${q(ts)}, ${q(SECRETARIA)});`
+    `insert into public.entradas_toras (id, especie_id, fornecedor_id, motorista_id, veiculo_id, placa, origem, municipio_origem, uf_origem, modo_medicao, carga_comprimento_m, carga_largura_m, carga_altura_m, peso_bruto_kg, tara_kg, peso_liquido_kg, quantidade, unidade, valor_unitario, valor_total, created_at, updated_at, created_by) values (${q(eid)}, (select id from public.especies where nome = ${q(especie)}), ${q(fornecedor)}, ${q(id("3", v.mot))}, ${q(id("4", veiculo + 1))}, ${q(v.placa)}, ${q(`Talhão ${1 + Math.floor(r() * 12)}`)}, ${q(fornecedores[0]!.mun)}, 'PR', ${q(modo)}, ${n(dados.cargaComprimentoM, 3)}, ${n(dados.cargaLarguraM, 3)}, ${n(dados.cargaAlturaM, 3)}, ${n(dados.pesoBrutoKg, 2)}, ${n(dados.taraKg, 2)}, ${c.pesoLiquidoKg === null ? "null" : q(paraNumeric(c.pesoLiquidoKg, 2))}, ${q(paraNumeric(c.quantidade, 6))}, ${q(c.unidade)}, ${q(paraNumeric(preco, 2))}, ${q(paraNumeric(c.valorTotal, 2))}, ${ts}, ${ts}, ${q(autor)});`
   )
   for (const t of c.toras) {
     sql(
-      `insert into public.entradas_toras_itens (entrada_id, diametro_cm, comprimento_m, quantidade, volume_m3, created_by) values (${q(eid)}, ${t.diametroCm}, ${t.comprimentoM}, ${t.quantidade}, ${q(paraNumeric(t.volumeM3, 6))}, ${q(SECRETARIA)});`
+      `insert into public.entradas_toras_itens (entrada_id, diametro_cm, comprimento_m, quantidade, volume_m3, created_at, updated_at, created_by) values (${q(eid)}, ${t.diametroCm}, ${t.comprimentoM}, ${t.quantidade}, ${q(paraNumeric(t.volumeM3, 6))}, ${ts}, ${ts}, ${q(SECRETARIA)});`
     )
   }
   sql(
-    `insert into public.estoque_toras_mov (especie_id, tipo, quantidade, unidade, entrada_id, created_at, updated_at, created_by) values ((select id from public.especies where nome = ${q(especie)}), 'compra', ${q(paraNumeric(c.quantidade, 6))}, ${q(c.unidade)}, ${q(eid)}, ${q(ts)}, ${q(ts)}, ${q(SECRETARIA)});`
+    `insert into public.estoque_toras_mov (especie_id, tipo, quantidade, unidade, entrada_id, created_at, updated_at, created_by) values ((select id from public.especies where nome = ${q(especie)}), 'compra', ${q(paraNumeric(c.quantidade, 6))}, ${q(c.unidade)}, ${q(eid)}, ${ts}, ${ts}, ${q(SECRETARIA)});`
   )
 
   // pagamentos: antigas quitadas, intermediárias parciais, recentes pendentes
   const idade = (fim - quando.getTime()) / 86_400_000
   const pago =
-    idade > 45 ? c.valorTotal : idade > 15 ? Math.round(c.valorTotal * 0.5 * 100) / 100 : 0
+    idade > 45
+      ? c.valorTotal
+      : idade > 15
+        ? Math.round(c.valorTotal * 0.5 * 100) / 100
+        : idade > 4
+          ? Math.round(c.valorTotal * 0.3 * 100) / 100
+          : 0
   if (pago > 0) {
-    const dataPag = new Date(quando.getTime() + 10 * 86_400_000).toISOString().slice(0, 10)
+    const quandoPag = Math.min(quando.getTime() + 10 * 86_400_000, AGORA_REF - 86_400_000)
+    const dataPag = dsql(quandoPag)
     sql(
-      `insert into public.entradas_toras_pagamentos (entrada_id, data_pagamento, valor, forma, created_at, updated_at, created_by) values (${q(eid)}, ${q(dataPag)}, ${q(paraNumeric(pago, 2))}, ${q(escolher(["pix", "transferencia", "boleto"]))}, ${q(ts)}, ${q(ts)}, ${q(SECRETARIA)});`
+      `insert into public.entradas_toras_pagamentos (entrada_id, data_pagamento, valor, forma, created_at, updated_at, created_by) values (${q(eid)}, ${dataPag}, ${q(paraNumeric(pago, 2))}, ${q(escolher(["pix", "transferencia", "boleto"]))}, ${ts}, ${ts}, ${q(SECRETARIA)});`
     )
   }
 }
 
 sql("alter table public.entradas_toras enable trigger carimbo;")
 sql("alter table public.estoque_toras_mov enable trigger carimbo;")
+sql("alter table public.entradas_toras_itens enable trigger carimbo;")
 sql("alter table public.entradas_toras_pagamentos enable trigger carimbo;")
 
 // ---------------------------------------------------------------- produção, estoque e vendas
@@ -280,6 +367,7 @@ const TABELAS_HIST = [
   "vendas",
   "vendas_itens",
   "romaneios",
+  "estoque_toras_mov",
 ]
 for (const t of TABELAS_HIST) sql(`alter table public.${t} disable trigger carimbo;`)
 
@@ -318,7 +406,7 @@ function itemEstoque(especie: string, ordemQualidade: number, b: [number, number
     // mínimo em algumas bitolas para mostrar o alerta de estoque baixo
     const minimo = ordemQualidade === 1 && nItem % 3 === 0 ? 400 : 0
     sql(
-      `insert into public.estoque_itens (id, especie_id, qualidade_id, espessura_cm, largura_cm, comprimento_m, estoque_minimo_pecas, created_at, updated_at, created_by) values (${q(item.id)}, (select id from public.especies where nome = ${q(especie)}), (select id from public.qualidades where ordem = ${ordemQualidade}), ${b[0]}, ${b[1]}, ${b[2]}, ${minimo}, '2026-07-01T12:00:00Z', '2026-07-01T12:00:00Z', ${q(SECRETARIA)});`
+      `insert into public.estoque_itens (id, especie_id, qualidade_id, espessura_cm, largura_cm, comprimento_m, estoque_minimo_pecas, created_at, updated_at, created_by) values (${q(item.id)}, (select id from public.especies where nome = ${q(especie)}), (select id from public.qualidades where ordem = ${ordemQualidade}), ${b[0]}, ${b[1]}, ${b[2]}, ${minimo}, ${tsql(inicio)}, ${tsql(inicio)}, ${q(SECRETARIA)});`
     )
   }
   return item
@@ -329,7 +417,7 @@ const N_PROD = 22
 const producoesGeradas: { ts: number; itens: { item: Item; qtd: number }[] }[] = []
 for (let i = 0; i < N_PROD; i++) {
   const quando = inicio + 3 * 86_400_000 + ((fim - inicio - 3 * 86_400_000) * i) / (N_PROD - 1)
-  const ts = new Date(quando).toISOString()
+  const ts = tsql(quando)
   const especie = i % 3 === 2 ? "Eucalipto" : "Pinus"
   const pid = id("7", i + 1)
   const linhasProd = Array.from({ length: 2 + Math.floor(r() * 3) }, () => {
@@ -350,16 +438,16 @@ for (let i = 0; i < N_PROD; i++) {
   const toras = Math.round((calc.volumeSerradoM3 / (0.44 + r() * 0.12)) * 1000) / 1000
   const rend = (calc.volumeSerradoM3 / toras) * 100
   const ls = [
-    `insert into public.producoes (id, data_producao, especie_id, toras_consumidas_m3, volume_serrado_m3, total_pecas, rendimento_percentual, created_at, updated_at, created_by) values (${q(pid)}, ${q(ts.slice(0, 10))}, (select id from public.especies where nome = ${q(especie)}), ${q(paraNumeric(toras, 6))}, ${q(paraNumeric(calc.volumeSerradoM3, 6))}, ${calc.totalPecas}, ${q(paraNumeric(rend, 3))}, ${q(ts)}, ${q(ts)}, ${q(SECRETARIA)});`,
+    `insert into public.producoes (id, data_producao, especie_id, toras_consumidas_m3, volume_serrado_m3, total_pecas, rendimento_percentual, created_at, updated_at, created_by) values (${q(pid)}, ${dsql(quando)}, (select id from public.especies where nome = ${q(especie)}), ${q(paraNumeric(toras, 6))}, ${q(paraNumeric(calc.volumeSerradoM3, 6))}, ${calc.totalPecas}, ${q(paraNumeric(rend, 3))}, ${ts}, ${ts}, ${q(SECRETARIA)});`,
   ]
   linhasProd.forEach((l, k) => {
     ls.push(
-      `insert into public.producoes_itens (producao_id, estoque_item_id, quantidade, volume_peca_m3, volume_total_m3, created_at, updated_at, created_by) values (${q(pid)}, ${q(l.item.id)}, ${l.qtd}, ${q(paraNumeric(calc.linhas[k]!.volumePecaM3, 6))}, ${q(paraNumeric(calc.linhas[k]!.volumeTotalM3, 6))}, ${q(ts)}, ${q(ts)}, ${q(SECRETARIA)});`,
-      `insert into public.estoque_mov (estoque_item_id, tipo, quantidade, producao_id, observacao, created_at, updated_at, created_by) values (${q(l.item.id)}, 'producao', ${l.qtd}, ${q(pid)}, ${q(`Produção nº ${i + 1}`)}, ${q(ts)}, ${q(ts)}, ${q(SECRETARIA)});`
+      `insert into public.producoes_itens (producao_id, estoque_item_id, quantidade, volume_peca_m3, volume_total_m3, created_at, updated_at, created_by) values (${q(pid)}, ${q(l.item.id)}, ${l.qtd}, ${q(paraNumeric(calc.linhas[k]!.volumePecaM3, 6))}, ${q(paraNumeric(calc.linhas[k]!.volumeTotalM3, 6))}, ${ts}, ${ts}, ${q(SECRETARIA)});`,
+      `insert into public.estoque_mov (estoque_item_id, tipo, quantidade, producao_id, observacao, created_at, updated_at, created_by) values (${q(l.item.id)}, 'producao', ${l.qtd}, ${q(pid)}, ${q(`Produção nº ${i + 1}`)}, ${ts}, ${ts}, ${q(SECRETARIA)});`
     )
   })
   ls.push(
-    `insert into public.estoque_toras_mov (especie_id, tipo, quantidade, unidade, producao_id, created_at, updated_at, created_by) values ((select id from public.especies where nome = ${q(especie)}), 'consumo', ${q(paraNumeric(-toras, 6))}, 'm3', ${q(pid)}, ${q(ts)}, ${q(ts)}, ${q(SECRETARIA)});`
+    `insert into public.estoque_toras_mov (especie_id, tipo, quantidade, unidade, producao_id, created_at, updated_at, created_by) values ((select id from public.especies where nome = ${q(especie)}), 'consumo', ${q(paraNumeric(-toras, 6))}, 'm3', ${q(pid)}, ${ts}, ${ts}, ${q(SECRETARIA)});`
   )
   evento(quando, ls)
   producoesGeradas.push({ ts: quando, itens: linhasProd })
@@ -381,9 +469,9 @@ for (const item of [...itensEstoque.values()].filter((_, k) => k % 4 === 1)) {
   const qtd = Math.min(5 + Math.floor(r() * 25), Math.max(0, disponivel(item.id, quando)))
   if (qtd <= 0) continue
   baixado.set(item.id, (baixado.get(item.id) ?? 0) + qtd)
-  const ts = new Date(quando).toISOString()
+  const ts = tsql(quando)
   evento(quando, [
-    `insert into public.estoque_mov (estoque_item_id, tipo, quantidade, motivo, observacao, created_at, updated_at, created_by) values (${q(item.id)}, 'ajuste', ${-qtd}, ${q(escolher(["quebra", "perda", "inventario"]))}, 'Contagem de pátio (exemplo)', ${q(ts)}, ${q(ts)}, ${q(SECRETARIA)});`,
+    `insert into public.estoque_mov (estoque_item_id, tipo, quantidade, motivo, observacao, created_at, updated_at, created_by) values (${q(item.id)}, 'ajuste', ${-qtd}, ${q(escolher(["quebra", "perda", "inventario"]))}, 'Contagem de pátio (exemplo)', ${ts}, ${ts}, ${q(SECRETARIA)});`,
   ])
 }
 
@@ -434,13 +522,14 @@ for (let i = 0; i < N_VENDAS; i++) {
     0
   )
   const vid = id("8", i + 1)
-  const ts = new Date(quando).toISOString()
+  const ts = tsql(quando)
   const confirmada = status !== "rascunho"
-  const tsConf = new Date(quando + 2 * 3600_000).toISOString()
-  const tsEntregue = new Date(quando + 26 * 3600_000).toISOString()
-  const tsCancel = new Date(quando + 5 * 3600_000).toISOString()
+  const autorVenda = r() < 0.3 ? GERENTE : SECRETARIA
+  const tsConf = tsql(quando + 2 * 3600_000)
+  const tsEntregue = tsql(Math.min(quando + 26 * 3600_000, AGORA_REF - 3600_000))
+  const tsCancel = tsql(quando + 5 * 3600_000)
   const ls = [
-    `insert into public.vendas (id, cliente_id, motorista_id, veiculo_id, placa, destino_cep, destino_logradouro, destino_numero, destino_bairro, destino_municipio, destino_codigo_ibge, destino_uf, tipo_frete, valor_frete, desconto, total_pecas, total_m3, valor_produtos, valor_total, status, confirmada_em, entregue_em, cancelada_em, motivo_cancelamento, created_at, updated_at, created_by) values (${q(vid)}, ${q(id("2", ci + 1))}, ${q(id("3", veiculo.mot))}, ${q(id("4", vi + 1))}, ${q(veiculo.placa)}, ${q(cliente.cep)}, ${q(cliente.log)}, ${q(cliente.num)}, ${q(cliente.bairro)}, ${q(cliente.mun)}, ${q(cliente.ibge)}, ${q(cliente.uf)}, ${q(frete)}, ${valorFrete}, 0, ${calc.totalPecas}, ${q(paraNumeric(calc.totalM3, 6))}, ${q(paraNumeric(calc.valorProdutos, 2))}, ${q(paraNumeric(calc.valorTotal, 2))}, ${q(status)}, ${confirmada ? q(tsConf) : "null"}, ${status === "entregue" ? q(tsEntregue) : "null"}, ${status === "cancelada" ? q(tsCancel) : "null"}, ${status === "cancelada" ? q("Cliente desistiu da carga (exemplo)") : "null"}, ${q(ts)}, ${q(ts)}, ${q(SECRETARIA)});`,
+    `insert into public.vendas (id, cliente_id, motorista_id, veiculo_id, placa, destino_cep, destino_logradouro, destino_numero, destino_bairro, destino_municipio, destino_codigo_ibge, destino_uf, tipo_frete, valor_frete, desconto, total_pecas, total_m3, valor_produtos, valor_total, status, confirmada_em, entregue_em, cancelada_em, motivo_cancelamento, created_at, updated_at, created_by) values (${q(vid)}, ${q(id("2", ci + 1))}, ${q(id("3", veiculo.mot))}, ${q(id("4", vi + 1))}, ${q(veiculo.placa)}, ${q(cliente.cep)}, ${q(cliente.log)}, ${q(cliente.num)}, ${q(cliente.bairro)}, ${q(cliente.mun)}, ${q(cliente.ibge)}, ${q(cliente.uf)}, ${q(frete)}, ${valorFrete}, 0, ${calc.totalPecas}, ${q(paraNumeric(calc.totalM3, 6))}, ${q(paraNumeric(calc.valorProdutos, 2))}, ${q(paraNumeric(calc.valorTotal, 2))}, ${q(status)}, ${confirmada ? tsConf : "null"}, ${status === "entregue" ? tsEntregue : "null"}, ${status === "cancelada" ? tsCancel : "null"}, ${status === "cancelada" ? q("Cliente desistiu da carga (exemplo)") : "null"}, ${ts}, ${ts}, ${q(autorVenda)});`,
   ]
   itens.forEach((x, k) => {
     const desc = descricaoItem({
@@ -451,19 +540,19 @@ for (let i = 0; i < N_VENDAS; i++) {
       comprimentoM: x.it.b[2],
     })
     ls.push(
-      `insert into public.vendas_itens (venda_id, estoque_item_id, descricao, quantidade, volume_m3, preco_m3, valor_total, created_at, updated_at, created_by) values (${q(vid)}, ${q(x.it.id)}, ${q(desc)}, ${x.qtd}, ${q(paraNumeric(calc.linhas[k]!.volumeM3, 6))}, ${x.preco}, ${q(paraNumeric(calc.linhas[k]!.valor, 2))}, ${q(ts)}, ${q(ts)}, ${q(SECRETARIA)});`
+      `insert into public.vendas_itens (venda_id, estoque_item_id, descricao, quantidade, volume_m3, preco_m3, valor_total, created_at, updated_at, created_by) values (${q(vid)}, ${q(x.it.id)}, ${q(desc)}, ${x.qtd}, ${q(paraNumeric(calc.linhas[k]!.volumeM3, 6))}, ${x.preco}, ${q(paraNumeric(calc.linhas[k]!.valor, 2))}, ${ts}, ${ts}, ${q(SECRETARIA)});`
     )
   })
   evento(quando, ls)
 
   if (confirmada) {
     const conf = [
-      `insert into public.romaneios (venda_id, emitido_em, created_at, updated_at, created_by) values (${q(vid)}, ${q(tsConf)}, ${q(tsConf)}, ${q(tsConf)}, ${q(SECRETARIA)});`,
+      `insert into public.romaneios (venda_id, emitido_em, created_at, updated_at, created_by) values (${q(vid)}, ${tsConf}, ${tsConf}, ${tsConf}, ${q(SECRETARIA)});`,
     ]
     for (const x of itens) {
       baixado.set(x.it.id, (baixado.get(x.it.id) ?? 0) + x.qtd)
       conf.push(
-        `insert into public.estoque_mov (estoque_item_id, tipo, quantidade, venda_id, observacao, created_at, updated_at, created_by) values (${q(x.it.id)}, 'venda', ${-x.qtd}, ${q(vid)}, ${q(`Venda nº ${i + 1}`)}, ${q(tsConf)}, ${q(tsConf)}, ${q(SECRETARIA)});`
+        `insert into public.estoque_mov (estoque_item_id, tipo, quantidade, venda_id, observacao, created_at, updated_at, created_by) values (${q(x.it.id)}, 'venda', ${-x.qtd}, ${q(vid)}, ${q(`Venda nº ${i + 1}`)}, ${tsConf}, ${tsConf}, ${q(SECRETARIA)});`
       )
     }
     evento(quando + 2 * 3600_000, conf)
@@ -472,7 +561,7 @@ for (let i = 0; i < N_VENDAS; i++) {
         quando + 5 * 3600_000,
         itens.map((x) => {
           baixado.set(x.it.id, (baixado.get(x.it.id) ?? 0) - x.qtd)
-          return `insert into public.estoque_mov (estoque_item_id, tipo, quantidade, venda_id, observacao, created_at, updated_at, created_by) values (${q(x.it.id)}, 'estorno_venda', ${x.qtd}, ${q(vid)}, 'Cancelamento da venda (exemplo)', ${q(tsCancel)}, ${q(tsCancel)}, ${q(SECRETARIA)});`
+          return `insert into public.estoque_mov (estoque_item_id, tipo, quantidade, venda_id, observacao, created_at, updated_at, created_by) values (${q(x.it.id)}, 'estorno_venda', ${x.qtd}, ${q(vid)}, 'Cancelamento da venda (exemplo)', ${tsCancel}, ${tsCancel}, ${q(SECRETARIA)});`
         })
       )
     }
@@ -482,6 +571,166 @@ for (let i = 0; i < N_VENDAS; i++) {
 eventos.sort((a, b) => a.ts - b.ts)
 for (const e of eventos) for (const l of e.linhas) sql(l)
 for (const t of TABELAS_HIST) sql(`alter table public.${t} enable trigger carimbo;`)
+
+// ---------------------------------------------------------------- histórico de preços
+sql("")
+sql("-- Preços: os do seed passam a valer há 20 dias; entram dois reajustes anteriores.")
+sql("alter table public.tabela_precos disable trigger carimbo;")
+sql(
+  `update public.tabela_precos set vigencia_inicio = ${dsql(AGORA_REF - 20 * 86_400_000)}, created_at = ${tsql(AGORA_REF - 20 * 86_400_000)}, updated_at = ${tsql(AGORA_REF - 20 * 86_400_000)}, created_by = ${q(GERENTE)};`
+)
+for (const [dias, fator] of [
+  [110, 0.9],
+  [60, 0.95],
+] as const) {
+  sql(
+    `insert into public.tabela_precos (tipo, especie_id, qualidade_id, unidade, valor, vigencia_inicio, observacao, created_at, updated_at, created_by) select tipo, especie_id, qualidade_id, unidade, round(valor * ${fator}, 0), ${dsql(AGORA_REF - dias * 86_400_000)}, 'Tabela anterior', ${tsql(AGORA_REF - dias * 86_400_000)}, ${tsql(AGORA_REF - dias * 86_400_000)}, ${q(GERENTE)} from public.tabela_precos where observacao is null;`
+  )
+}
+sql("alter table public.tabela_precos enable trigger carimbo;")
+
+// ---------------------------------------------------------------- orçamentos do site
+const ORCAMENTOS: [string, string, string, string, string, number, string][] = [
+  [
+    "Ricardo Almeida",
+    "41998761234",
+    "Curitiba",
+    "Pinus serrado",
+    "Preciso de 8 m³ de pinus 2,5 x 30 x 3,00 para formas. Entrega na obra.",
+    0.2,
+    "novo",
+  ],
+  [
+    "Fernanda Souza",
+    "42999123456",
+    "Ponta Grossa",
+    "Tábuas",
+    "Orçamento de 200 tábuas 2,5 x 15 x 3,00, 2ª linha.",
+    0.6,
+    "novo",
+  ],
+  [
+    "Luiz Henrique Prado",
+    "43991234567",
+    "Londrina",
+    "Medida sob encomenda",
+    "Vocês serram 4 x 20 x 4,00 em eucalipto? Quantidade 3 m³.",
+    1.3,
+    "novo",
+  ],
+  [
+    "Pallets Rápido Ltda",
+    "47988776655",
+    "Joinville",
+    "Pinus serrado",
+    "Compramos 20 m³/mês de pinus 1,8 x 9 x 1,20 para paletes. Gostaria de uma proposta mensal.",
+    2.1,
+    "novo",
+  ],
+  [
+    "Marina Costa",
+    "42988112233",
+    "Castro",
+    "Vigas e caibros",
+    "Telhado de 120 m², preciso de lista de vigas e caibros de eucalipto.",
+    3.5,
+    "em_atendimento",
+  ],
+  [
+    "Construtora Ideal",
+    "41997654321",
+    "São José dos Pinhais",
+    "Pinus serrado",
+    "Cotação de 15 m³ de pinus 5 x 10 x 3,00.",
+    5,
+    "em_atendimento",
+  ],
+  [
+    "André Martins",
+    "42999887766",
+    "Carambeí",
+    "Eucalipto serrado",
+    "Eucalipto 6 x 16 para estrutura de barracão.",
+    6.2,
+    "em_atendimento",
+  ],
+  [
+    "Sítio Bela Vista",
+    "42998765432",
+    "Palmeira",
+    "Outro",
+    "Mourões e tábuas para cerca, uns 2 m³.",
+    8,
+    "concluido",
+  ],
+  [
+    "Marcenaria Arte Viva",
+    "41996543210",
+    "Curitiba",
+    "Tábuas",
+    "Pinus 1ª linha 2,5 x 30 para móveis, 4 m³.",
+    10.4,
+    "concluido",
+  ],
+  [
+    "Gabriel Ferreira",
+    "42997651234",
+    "Ponta Grossa",
+    "Vigas e caibros",
+    "Caibros 5 x 5 x 3,00, 300 peças.",
+    12,
+    "concluido",
+  ],
+  [
+    "Obras & Reformas PG",
+    "42991239876",
+    "Ponta Grossa",
+    "Pinus serrado",
+    "Formas e escoramento para laje, 10 m³.",
+    14.6,
+    "concluido",
+  ],
+  [
+    "Patrícia Gomes",
+    "42995554433",
+    "Tibagi",
+    "Eucalipto serrado",
+    "Preço do m³ de eucalipto 3ª linha.",
+    16,
+    "concluido",
+  ],
+  ["Teste", "11999999999", "", "", "teste teste", 18, "descartado"],
+  [
+    "Roberto Silva",
+    "43988880000",
+    "Apucarana",
+    "Pinus serrado",
+    "Frete para Apucarana? 2 m³ apenas.",
+    19.5,
+    "descartado",
+  ],
+]
+sql("alter table public.orcamentos_site disable trigger carimbo;")
+for (const [nome, tel, cidade, produto, msg, diasAtras, status] of ORCAMENTOS) {
+  const t = tsql(AGORA_REF - diasAtras * 86_400_000)
+  const email = `${nome
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[^a-z ]/g, "")
+    .trim()
+    .replace(/ +/g, ".")}@exemplo.com.br`
+  sql(
+    `insert into public.orcamentos_site (nome, telefone, email, cidade, produto, mensagem, status, created_at, updated_at) values (${q(nome)}, ${q(tel)}, ${q(email)}, ${q(cidade || null)}, ${q(produto || null)}, ${q(msg)}, ${q(status)}, ${t}, ${t});`
+  )
+}
+sql("alter table public.orcamentos_site enable trigger carimbo;")
+
+// ---------------------------------------------------------------- usuários e auditoria
+sql(`update public.usuarios set created_at = ${tsql(inicio - 10 * 86_400_000)};`)
+sql("-- Auditoria com o usuário e a data de cada registro simulado")
+sql(`update public.auditoria set
+  usuario_id = coalesce(usuario_id, nullif(coalesce(dados_depois ->> 'created_by', dados_antes ->> 'created_by'), '')::uuid),
+  created_at = coalesce((dados_depois ->> 'updated_at')::timestamptz, (dados_antes ->> 'updated_at')::timestamptz, created_at);`)
 
 writeFileSync(
   new URL("../supabase/seeds/dados_exemplo.sql", import.meta.url),

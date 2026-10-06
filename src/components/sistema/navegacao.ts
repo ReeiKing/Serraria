@@ -4,6 +4,8 @@ import {
   Building2,
   FileText,
   Factory,
+  History,
+  Inbox,
   LayoutDashboard,
   Tags,
   Truck,
@@ -16,6 +18,8 @@ export type ItemMenu = {
   icone: LucideIcon
   /** Módulo ainda não construído: aparece desabilitado. */
   emBreve?: boolean
+  /** Chave de um contador exibido ao lado (ex.: orçamentos novos). */
+  contador?: "orcamentos"
 }
 
 export const MENU: ItemMenu[] = [
@@ -34,11 +38,17 @@ export const MENU: ItemMenu[] = [
     icone: FileText,
     emBreve: true,
   },
+  {
+    titulo: "Orçamentos do site",
+    href: "/sistema/orcamentos",
+    icone: Inbox,
+    contador: "orcamentos",
+  },
   { titulo: "Cadastros", href: "/sistema/cadastros", icone: Building2 },
   {
     titulo: "Relatórios",
     href: "/sistema/relatorios",
     icone: BarChart3,
-    emBreve: true,
   },
+  { titulo: "Auditoria", href: "/sistema/auditoria", icone: History },
 ]
