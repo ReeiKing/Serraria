@@ -56,6 +56,7 @@ export function TabelaDados<T extends RowData>({
   aoClicarLinha,
   tamanhoPagina = 20,
   textoBusca,
+  normalizarBusca,
 }: {
   dados: T[]
   colunas: Coluna<T>[]
@@ -67,6 +68,8 @@ export function TabelaDados<T extends RowData>({
   tamanhoPagina?: number
   /** Texto pesquisável de cada linha (padrão: todos os valores de texto/número). */
   textoBusca?: (linha: T) => string
+  /** Transformação extra aplicada à busca (ex.: medidas "1,8 x 9" → "1.8x9"). */
+  normalizarBusca?: (texto: string) => string
 }) {
   const [busca, setBusca] = useState("")
 
@@ -75,7 +78,11 @@ export function TabelaDados<T extends RowData>({
         const alvo = textoBusca
           ? textoBusca(d)
           : Object.values(d as Record<string, unknown>).join(" ")
-        return semAcento(alvo).includes(semAcento(busca))
+        const alvoNorm = semAcento(alvo)
+        return (
+          alvoNorm.includes(semAcento(busca)) ||
+          (!!normalizarBusca && alvoNorm.includes(semAcento(normalizarBusca(busca))))
+        )
       })
     : dados
 

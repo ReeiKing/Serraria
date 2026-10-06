@@ -2,9 +2,19 @@ import { ZodError } from "zod"
 
 import { SessaoExpiradaError } from "@/db"
 
-export type Resultado<T = void> = { ok: true; dados: T } | { ok: false; erro: string }
+export type Resultado<T = void> =
+  { ok: true; dados: T } | { ok: false; erro: string; codigo?: CodigoErro }
 
-type ErroPg = { code?: string; message?: string; constraint_name?: string; detail?: string }
+/** Erros que a tela trata de forma especial (ex.: pedir confirmação). */
+export type CodigoErro = "ESTOQUE_NEGATIVO"
+
+type ErroPg = {
+  code?: string
+  message?: string
+  constraint_name?: string
+  detail?: string
+  hint?: string
+}
 
 function erroPostgres(e: unknown): ErroPg | null {
   // Drizzle embrulha o erro do driver em `cause`.
@@ -75,6 +85,8 @@ export async function executar<T>(fn: () => Promise<T>): Promise<Resultado<T>> {
       String((e as { digest: unknown }).digest).startsWith("NEXT_")
     )
       throw e
-    return { ok: false, erro: mensagemErro(e) }
+    const pg = erroPostgres(e)
+    const codigo = pg?.hint === "ESTOQUE_NEGATIVO" ? ("ESTOQUE_NEGATIVO" as const) : undefined
+    return { ok: false, erro: mensagemErro(e), codigo }
   }
 }

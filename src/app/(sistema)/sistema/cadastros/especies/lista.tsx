@@ -6,6 +6,7 @@ import { BadgeAtivo } from "@/components/sistema/badge-ativo"
 import { PaginaCadastro } from "@/components/sistema/pagina-cadastro"
 import type { Coluna } from "@/components/tabela/tabela-dados"
 import type { especies, qualidades } from "@/db/gerado/schema"
+import { numeroParaCampo } from "@/lib/format"
 import { especieSchema, qualidadeSchema } from "@/lib/schemas/cadastros"
 
 import {
@@ -68,6 +69,8 @@ export function ListaEspecies({ dados }: { dados: Especie[] }) {
             conifera: r?.conifera ?? false,
             ncmSerrada: r?.ncmSerrada ?? "",
             ncmTora: r?.ncmTora ?? "",
+            fatorStM3: numeroParaCampo(r?.fatorStM3 ?? 0.65),
+            fatorTM3: numeroParaCampo(r?.fatorTM3 ?? 1),
           }}
           salvar={(v) => salvarEspecie(r?.id ?? null, v)}
           excluir={r ? () => excluirEspecie(r.id) : undefined}
@@ -89,6 +92,18 @@ export function ListaEspecies({ dados }: { dados: Especie[] }) {
               label="NCM da tora"
               inputMode="numeric"
               descricao="Posição 4403"
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <CampoNumero
+              name="fatorStM3"
+              label="m³ por metro estéreo"
+              descricao="Converte toras compradas em estéreo para m³ (padrão 0,65)."
+            />
+            <CampoNumero
+              name="fatorTM3"
+              label="m³ por tonelada"
+              descricao="Converte toras compradas por peso para m³."
             />
           </div>
         </FormularioCadastro>

@@ -100,6 +100,8 @@ export const especieSchema = z.object({
   conifera: z.boolean(),
   ncmSerrada: zNcm,
   ncmTora: zNcm,
+  fatorStM3: zNumeroBR({ maiorQueZero: true, max: 2, rotulo: "Fator" }),
+  fatorTM3: zNumeroBR({ maiorQueZero: true, max: 3, rotulo: "Fator" }),
 })
 
 export const qualidadeSchema = z.object({

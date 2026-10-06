@@ -2,22 +2,22 @@
 // Fonte da verdade: supabase/migrations/*.sql
 import {
   pgTable,
+  index,
   foreignKey,
+  unique,
   pgPolicy,
-  uuid,
-  text,
-  boolean,
-  timestamp,
-  uniqueIndex,
   check,
+  uuid,
+  bigint,
+  date,
+  numeric,
+  integer,
+  text,
+  timestamp,
+  boolean,
+  uniqueIndex,
   smallint,
   char,
-  integer,
-  numeric,
-  index,
-  date,
-  unique,
-  bigint,
   jsonb,
   pgView,
   pgEnum,
@@ -82,6 +82,71 @@ export const tipoVeiculo = pgEnum("tipo_veiculo", [
   "outro",
 ])
 export const unidadeMedida = pgEnum("unidade_medida", ["st", "m3", "t"])
+
+export const producoes = pgTable(
+  "producoes",
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    // You can use { mode: "bigint" } if numbers are exceeding js number limitations
+    numero: bigint({ mode: "number" }).generatedAlwaysAsIdentity({
+      name: "producoes_numero_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 9223372036854775807,
+      cache: 1,
+    }),
+    dataProducao: date("data_producao")
+      .default(sql`CURRENT_DATE`)
+      .notNull(),
+    especieId: uuid("especie_id").notNull(),
+    torasConsumidasM3: numeric("toras_consumidas_m3", { precision: 14, scale: 6 }),
+    volumeSerradoM3: numeric("volume_serrado_m3", { precision: 14, scale: 6 })
+      .default("0")
+      .notNull(),
+    totalPecas: integer("total_pecas").default(0).notNull(),
+    rendimentoPercentual: numeric("rendimento_percentual", { precision: 7, scale: 3 }),
+    observacoes: text(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    createdBy: uuid("created_by"),
+    updatedBy: uuid("updated_by"),
+    estornadaEm: timestamp("estornada_em", { withTimezone: true, mode: "string" }),
+    motivoEstorno: text("motivo_estorno"),
+  },
+  (table) => [
+    index("producoes_data").using("btree", table.dataProducao.desc().nullsFirst().op("date_ops")),
+    index("producoes_especie").using("btree", table.especieId.asc().nullsLast().op("uuid_ops")),
+    foreignKey({
+      columns: [table.createdBy],
+      foreignColumns: [users.id],
+      name: "producoes_created_by_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.especieId],
+      foreignColumns: [especies.id],
+      name: "producoes_especie_id_fkey",
+    }),
+    foreignKey({
+      columns: [table.updatedBy],
+      foreignColumns: [users.id],
+      name: "producoes_updated_by_fkey",
+    }).onDelete("set null"),
+    unique("producoes_numero_key").on(table.numero),
+    pgPolicy("usuario ativo", {
+      as: "permissive",
+      for: "all",
+      to: ["authenticated"],
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+    }),
+    check("producoes_toras_consumidas_m3_check", sql`toras_consumidas_m3 > (0)::numeric`),
+  ]
+)
 
 export const usuarios = pgTable(
   "usuarios",
@@ -401,49 +466,6 @@ export const veiculos = pgTable(
     }),
     check("veiculos_placa_check", sql`placa ~ '^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$'::text`),
     check("veiculos_tara_kg_check", sql`tara_kg >= (0)::numeric`),
-  ]
-)
-
-export const especies = pgTable(
-  "especies",
-  {
-    id: uuid().defaultRandom().primaryKey().notNull(),
-    nome: text().notNull(),
-    nomeCientifico: text("nome_cientifico"),
-    conifera: boolean().default(false).notNull(),
-    ncmSerrada: text("ncm_serrada"),
-    ncmTora: text("ncm_tora"),
-    ativo: boolean().default(true).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
-      .defaultNow()
-      .notNull(),
-    createdBy: uuid("created_by"),
-    updatedBy: uuid("updated_by"),
-  },
-  (table) => [
-    uniqueIndex("especies_nome").using("btree", sql`lower(nome)`),
-    foreignKey({
-      columns: [table.createdBy],
-      foreignColumns: [users.id],
-      name: "especies_created_by_fkey",
-    }).onDelete("set null"),
-    foreignKey({
-      columns: [table.updatedBy],
-      foreignColumns: [users.id],
-      name: "especies_updated_by_fkey",
-    }).onDelete("set null"),
-    pgPolicy("usuario ativo", {
-      as: "permissive",
-      for: "all",
-      to: ["authenticated"],
-      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
-      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
-    }),
-    check("especies_ncm_serrada_check", sql`ncm_serrada ~ '^\d{8}$'::text`),
-    check("especies_ncm_tora_check", sql`ncm_tora ~ '^\d{8}$'::text`),
   ]
 )
 
@@ -994,69 +1016,6 @@ export const estoqueMov = pgTable(
     }),
     check("estoque_mov_check", sql`(tipo <> 'ajuste'::tipo_mov_estoque) OR (motivo IS NOT NULL)`),
     check("estoque_mov_quantidade_check", sql`quantidade <> 0`),
-  ]
-)
-
-export const producoes = pgTable(
-  "producoes",
-  {
-    id: uuid().defaultRandom().primaryKey().notNull(),
-    // You can use { mode: "bigint" } if numbers are exceeding js number limitations
-    numero: bigint({ mode: "number" }).generatedAlwaysAsIdentity({
-      name: "producoes_numero_seq",
-      startWith: 1,
-      increment: 1,
-      minValue: 1,
-      maxValue: 9223372036854775807,
-      cache: 1,
-    }),
-    dataProducao: date("data_producao")
-      .default(sql`CURRENT_DATE`)
-      .notNull(),
-    especieId: uuid("especie_id").notNull(),
-    torasConsumidasM3: numeric("toras_consumidas_m3", { precision: 14, scale: 6 }),
-    volumeSerradoM3: numeric("volume_serrado_m3", { precision: 14, scale: 6 })
-      .default("0")
-      .notNull(),
-    totalPecas: integer("total_pecas").default(0).notNull(),
-    rendimentoPercentual: numeric("rendimento_percentual", { precision: 7, scale: 3 }),
-    observacoes: text(),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
-      .defaultNow()
-      .notNull(),
-    createdBy: uuid("created_by"),
-    updatedBy: uuid("updated_by"),
-  },
-  (table) => [
-    index("producoes_data").using("btree", table.dataProducao.desc().nullsFirst().op("date_ops")),
-    index("producoes_especie").using("btree", table.especieId.asc().nullsLast().op("uuid_ops")),
-    foreignKey({
-      columns: [table.createdBy],
-      foreignColumns: [users.id],
-      name: "producoes_created_by_fkey",
-    }).onDelete("set null"),
-    foreignKey({
-      columns: [table.especieId],
-      foreignColumns: [especies.id],
-      name: "producoes_especie_id_fkey",
-    }),
-    foreignKey({
-      columns: [table.updatedBy],
-      foreignColumns: [users.id],
-      name: "producoes_updated_by_fkey",
-    }).onDelete("set null"),
-    unique("producoes_numero_key").on(table.numero),
-    pgPolicy("usuario ativo", {
-      as: "permissive",
-      for: "all",
-      to: ["authenticated"],
-      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
-      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
-    }),
-    check("producoes_toras_consumidas_m3_check", sql`toras_consumidas_m3 > (0)::numeric`),
   ]
 )
 
@@ -1626,6 +1585,63 @@ export const auditoria = pgTable(
     ),
   ]
 )
+
+export const especies = pgTable(
+  "especies",
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    nome: text().notNull(),
+    nomeCientifico: text("nome_cientifico"),
+    conifera: boolean().default(false).notNull(),
+    ncmSerrada: text("ncm_serrada"),
+    ncmTora: text("ncm_tora"),
+    ativo: boolean().default(true).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    createdBy: uuid("created_by"),
+    updatedBy: uuid("updated_by"),
+    fatorStM3: numeric("fator_st_m3", { precision: 6, scale: 4 }).default("0.65").notNull(),
+    fatorTM3: numeric("fator_t_m3", { precision: 6, scale: 4 }).default("1.0").notNull(),
+  },
+  (table) => [
+    uniqueIndex("especies_nome").using("btree", sql`lower(nome)`),
+    foreignKey({
+      columns: [table.createdBy],
+      foreignColumns: [users.id],
+      name: "especies_created_by_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.updatedBy],
+      foreignColumns: [users.id],
+      name: "especies_updated_by_fkey",
+    }).onDelete("set null"),
+    pgPolicy("usuario ativo", {
+      as: "permissive",
+      for: "all",
+      to: ["authenticated"],
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+    }),
+    check("especies_fator_st_m3_check", sql`fator_st_m3 > (0)::numeric`),
+    check("especies_fator_t_m3_check", sql`fator_t_m3 > (0)::numeric`),
+    check("especies_ncm_serrada_check", sql`ncm_serrada ~ '^\d{8}$'::text`),
+    check("especies_ncm_tora_check", sql`ncm_tora ~ '^\d{8}$'::text`),
+  ]
+)
+export const estoqueTorasEquivalente = pgView("estoque_toras_equivalente", {
+  especieId: uuid("especie_id"),
+  especie: text(),
+  saldoM3: numeric("saldo_m3", { precision: 14, scale: 6 }),
+})
+  .with({ securityInvoker: true })
+  .as(
+    sql`SELECT e.id AS especie_id, e.nome AS especie, COALESCE(sum( CASE m.unidade WHEN 'm3'::unidade_medida THEN m.quantidade WHEN 'st'::unidade_medida THEN m.quantidade * e.fator_st_m3 WHEN 't'::unidade_medida THEN m.quantidade * e.fator_t_m3 ELSE NULL::numeric END), 0::numeric)::numeric(14,6) AS saldo_m3 FROM especies e LEFT JOIN estoque_toras_mov m ON m.especie_id = e.id GROUP BY e.id, e.nome`
+  )
+
 export const estoqueTorasSaldo = pgView("estoque_toras_saldo", {
   especieId: uuid("especie_id"),
   unidade: unidadeMedida(),
