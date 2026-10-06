@@ -233,7 +233,7 @@ function TabelaPecas({ qualidades, bitolas }: { qualidades: Opcao[]; bitolas: Bi
               else append(linha)
             }}
           >
-            <SelectTrigger className="h-12 w-auto min-w-56">
+            <SelectTrigger className="h-12 w-auto min-w-56" aria-label="Usar bitola do estoque">
               <SelectValue placeholder="Usar bitola do estoque…" />
             </SelectTrigger>
             <SelectContent>

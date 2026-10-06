@@ -6,6 +6,7 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
+    exclude: ["e2e/**", "node_modules/**"],
     env: { TZ: "UTC" },
     coverage: { include: ["src/lib/**/*.ts"] },
   },

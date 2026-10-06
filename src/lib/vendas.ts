@@ -60,7 +60,7 @@ export const STATUS_VENDA = {
     classe: "bg-violet-500/15 text-violet-700 dark:text-violet-300",
   },
   entregue: { rotulo: "Entregue", classe: "bg-floresta/15 text-floresta" },
-  cancelada: { rotulo: "Cancelada", classe: "bg-destructive/15 text-destructive" },
+  cancelada: { rotulo: "Cancelada", classe: "bg-destructive/15 text-red-700 dark:text-red-300" },
 } as const
 
 export const TIPOS_FRETE = [

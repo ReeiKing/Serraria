@@ -97,7 +97,7 @@ export function ListaVendas({ dados }: { dados: Linha[] }) {
             )}
           >
             {f.rotulo}
-            <span className="ml-1.5 text-xs opacity-70">
+            <span className="ml-1.5 text-xs opacity-90">
               {f.valor ? dados.filter((d) => d.status === f.valor).length : dados.length}
             </span>
           </button>

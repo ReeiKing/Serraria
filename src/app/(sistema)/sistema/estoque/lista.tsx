@@ -38,7 +38,7 @@ export function BadgeSituacao({ situacao }: { situacao: Situacao }) {
     ok: ["OK", "bg-floresta/15 text-floresta"],
     baixo: ["Baixo", "bg-alerta/25 text-amber-800 dark:text-amber-200"],
     zerado: ["Zerado", "bg-muted text-muted-foreground"],
-    negativo: ["Negativo", "bg-destructive/15 text-destructive"],
+    negativo: ["Negativo", "bg-destructive/15 text-red-700 dark:text-red-300"],
   }
   const [rotulo, classe] = mapa[situacao]
   return (

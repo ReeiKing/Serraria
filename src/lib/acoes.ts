@@ -68,6 +68,9 @@ export function mensagemErro(e: unknown): string {
     }
   }
 
+  // Erros lançados de propósito pelo código (new Error("mensagem amigável")) chegam à tela.
+  if (e instanceof Error && e.constructor === Error && !("cause" in e && e.cause)) return e.message
+
   console.error(e)
   return "Não foi possível concluir a operação. Tente novamente."
 }

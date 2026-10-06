@@ -2,17 +2,18 @@
 
 import { motion, useInView, useReducedMotion, useScroll, useTransform } from "framer-motion"
 import dynamic from "next/dynamic"
+import Image from "next/image"
 import { ChevronDown, MessageCircle, ShieldCheck } from "lucide-react"
-import { useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { BotaoAnimado } from "@/components/site/botao-animado"
 import { Serragem, VeiosMadeira } from "@/components/site/textura-madeira"
 import { linkWhatsApp, siteConfig } from "@/config/site"
+import { podeRenderizar3D } from "@/lib/webgl"
 
 // three.js só no navegador e carregado sob demanda (não pesa no primeiro carregamento)
 const CenaSerraria = dynamic(() => import("@/components/site/cena-serraria"), {
   ssr: false,
-  loading: () => <div className="size-full animate-pulse rounded-full bg-amber-900/20" />,
 })
 
 const cascata = {
@@ -34,6 +35,24 @@ export function Hero() {
   const reduzir = useReducedMotion()
   const refArte = useRef<HTMLDivElement>(null)
   const arteVisivel = useInView(refArte, { margin: "100px" })
+  const [usar3D, setUsar3D] = useState(false)
+  const [cenaPronta, setCenaPronta] = useState(false)
+
+  // A cena 3D só é baixada depois que a página ficou ociosa (não atrasa o carregamento)
+  useEffect(() => {
+    if (reduzir) return
+    const iniciar = () => setUsar3D(podeRenderizar3D())
+    const w = window as Window & {
+      requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number
+    }
+    if (w.requestIdleCallback) {
+      const id = w.requestIdleCallback(iniciar, { timeout: 2500 })
+      return () =>
+        (window as Window & { cancelIdleCallback?: (id: number) => void }).cancelIdleCallback?.(id)
+    }
+    const t = setTimeout(iniciar, 1200)
+    return () => clearTimeout(t)
+  }, [reduzir])
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] })
   const yArte = useTransform(scrollYProgress, [0, 1], [0, reduzir ? 0 : 140])
   const opacidade = useTransform(scrollYProgress, [0, 0.8], [1, 0])
@@ -115,12 +134,12 @@ export function Hero() {
           </motion.a>
         </motion.div>
 
-        {/* Arte 3D: tora sendo cortada pela serra circular */}
+        {/* Arte: imagem da cena (aparece na hora) e a cena 3D por cima, quando o aparelho aguenta */}
         <motion.div
           ref={refArte}
           style={{ y: yArte }}
-          initial={reduzir ? false : { opacity: 0, scale: 0.92 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={reduzir ? false : { scale: 0.94 }}
+          animate={{ scale: 1 }}
           transition={{ duration: 1, delay: 0.2 }}
           className="relative mx-auto aspect-square w-full max-w-md lg:max-w-none"
         >
@@ -129,7 +148,25 @@ export function Hero() {
             className="absolute inset-[15%] rounded-full bg-orange-500/20 blur-3xl"
           />
           <div className="absolute inset-0 [mask-image:radial-gradient(closest-side,black_72%,transparent)]">
-            <CenaSerraria movimento={!reduzir} ativo={arteVisivel} />
+            <Image
+              src="/hero-serraria.png"
+              alt="Serra circular cortando uma tora de pinus, com serragem saindo do corte"
+              fill
+              priority
+              sizes="(min-width: 1024px) 50vw, 90vw"
+              className={`object-contain transition-opacity duration-700 ${cenaPronta ? "opacity-0" : "opacity-100"}`}
+            />
+            {usar3D && (
+              <div
+                className={`absolute inset-0 transition-opacity duration-700 ${cenaPronta ? "opacity-100" : "opacity-0"}`}
+              >
+                <CenaSerraria
+                  movimento={!reduzir}
+                  ativo={arteVisivel}
+                  aoFicarPronta={() => setCenaPronta(true)}
+                />
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

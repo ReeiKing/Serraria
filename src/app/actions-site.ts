@@ -1,9 +1,11 @@
 "use server"
 
+import { headers } from "next/headers"
 import { z } from "zod"
 
 import { dbSistema, orcamentosSite } from "@/db"
 import { executar } from "@/lib/acoes"
+import { dentroDoLimite } from "@/lib/limite"
 import { zEmailOpcional, zTelefoneOpcional, zTextoOpcional } from "@/lib/validacao"
 
 const orcamentoSchemaServidor = z.object({
@@ -24,6 +26,11 @@ const orcamentoSchemaServidor = z.object({
 /** Formulário de orçamento do site público (visitante sem login). */
 export async function enviarOrcamento(entrada: unknown) {
   return executar(async () => {
+    const h = await headers()
+    const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "local"
+    if (!dentroDoLimite(`orcamento:${ip}`, 5, 10 * 60_000)) {
+      throw new Error("Muitos pedidos em sequência. Aguarde alguns minutos ou chame no WhatsApp.")
+    }
     const { site: _robo, ...dados } = orcamentoSchemaServidor.parse(entrada)
     void _robo
     await dbSistema.insert(orcamentosSite).values({ ...dados, telefone: dados.telefone! })

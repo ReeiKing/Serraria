@@ -19,7 +19,8 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
-    "db:pull": "drizzle-kit pull && node scripts/pos-db-pull.mjs && prettier --write src/db/gerado"
+    "db:pull": "drizzle-kit pull && node scripts/pos-db-pull.mjs && prettier --write src/db/gerado",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
@@ -56,6 +57,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@eslint/eslintrc": "^3",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",

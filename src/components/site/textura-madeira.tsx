@@ -7,38 +7,33 @@ import { cn } from "@/lib/utils"
 /** Arredonda coordenadas para o SVG sair idêntico no servidor e no navegador. */
 const r2 = (n: number) => Math.round(n * 100) / 100
 
-/** Veios de madeira desenhados em SVG (sem imagem), com ondulação lenta. */
+/** Veios de madeira desenhados em SVG (sem imagem). A deriva lenta é CSS (sem custo de JS). */
 export function VeiosMadeira({ className, linhas = 22 }: { className?: string; linhas?: number }) {
-  const reduzir = useReducedMotion()
   const altura = 600
   const passo = altura / linhas
-
   return (
-    <svg
-      aria-hidden
-      className={cn("absolute inset-0 size-full", className)}
-      viewBox={`0 0 1200 ${altura}`}
-      preserveAspectRatio="none"
-    >
-      {Array.from({ length: linhas }, (_, i) => {
-        const y = i * passo + passo / 2
-        const amp = 6 + ((i * 7) % 11)
-        const d1 = `M-50 ${y} C 250 ${y - amp}, 450 ${y + amp * 1.6}, 700 ${y} S 1050 ${y - amp}, 1250 ${y + amp / 2}`
-        const d2 = `M-50 ${y + amp / 3} C 250 ${y + amp}, 450 ${y - amp}, 700 ${y + amp / 2} S 1050 ${y + amp}, 1250 ${y - amp / 2}`
-        return (
-          <motion.path
-            key={i}
-            d={d1}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={i % 4 === 0 ? 2.2 : 1}
-            strokeOpacity={i % 4 === 0 ? 0.55 : 0.3}
-            animate={reduzir ? undefined : { d: [d1, d2, d1] }}
-            transition={{ duration: 14 + (i % 5) * 2, repeat: Infinity, ease: "easeInOut" }}
-          />
-        )
-      })}
-    </svg>
+    <div aria-hidden className={cn("absolute inset-0 overflow-hidden", className)}>
+      <svg
+        className="veios-deriva absolute -inset-x-[6%] inset-y-0 h-full w-[112%]"
+        viewBox={`0 0 1200 ${altura}`}
+        preserveAspectRatio="none"
+      >
+        {Array.from({ length: linhas }, (_, i) => {
+          const y = r2(i * passo + passo / 2)
+          const amp = 6 + ((i * 7) % 11)
+          return (
+            <path
+              key={i}
+              d={`M-50 ${y} C 250 ${y - amp}, 450 ${r2(y + amp * 1.6)}, 700 ${y} S 1050 ${y - amp}, 1250 ${r2(y + amp / 2)}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={i % 4 === 0 ? 2.2 : 1}
+              strokeOpacity={i % 4 === 0 ? 0.55 : 0.3}
+            />
+          )
+        })}
+      </svg>
+    </div>
   )
 }
 
@@ -166,7 +161,7 @@ export function SerraCircular({
   )
 }
 
-/** Partículas de serragem flutuando. */
+/** Partículas de serragem flutuando (animação CSS, respeita "reduzir movimento"). */
 export function Serragem({
   quantidade = 18,
   className,
@@ -174,34 +169,34 @@ export function Serragem({
   quantidade?: number
   className?: string
 }) {
-  const reduzir = useReducedMotion()
-  if (reduzir) return null
   return (
     <div
       aria-hidden
-      className={cn("pointer-events-none absolute inset-0 overflow-hidden", className)}
+      className={cn(
+        "pointer-events-none absolute inset-0 overflow-hidden motion-reduce:hidden",
+        className
+      )}
     >
       {Array.from({ length: quantidade }, (_, i) => {
         // pseudo-aleatório estável (mesmo resultado no servidor e no navegador)
         const s = Math.sin(i * 999) * 10000
         const r = s - Math.floor(s)
         return (
-          <motion.span
+          <span
             key={i}
-            className="absolute rounded-full bg-amber-200/70"
-            style={{
-              left: `${(i * 37) % 100}%`,
-              top: `${60 + r * 40}%`,
-              width: 3 + r * 4,
-              height: 3 + r * 4,
-            }}
-            animate={{
-              y: [0, -260 - r * 200],
-              x: [0, (r - 0.5) * 80],
-              opacity: [0, 0.9, 0],
-              rotate: [0, 180],
-            }}
-            transition={{ duration: 6 + r * 6, repeat: Infinity, delay: r * 6, ease: "easeOut" }}
+            className="serragem-particula absolute rounded-full bg-amber-200/70"
+            style={
+              {
+                left: `${(i * 37) % 100}%`,
+                top: `${r2(60 + r * 40)}%`,
+                width: r2(3 + r * 4),
+                height: r2(3 + r * 4),
+                "--dy": `${r2(-260 - r * 200)}px`,
+                "--dx": `${r2((r - 0.5) * 80)}px`,
+                animationDuration: `${r2(6 + r * 6)}s`,
+                animationDelay: `${r2(r * 6)}s`,
+              } as React.CSSProperties
+            }
           />
         )
       })}

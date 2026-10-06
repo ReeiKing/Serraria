@@ -47,7 +47,7 @@ const TABELAS: Record<string, string> = {
 const ACOES = {
   INSERT: { rotulo: "Criou", classe: "bg-floresta/15 text-floresta" },
   UPDATE: { rotulo: "Alterou", classe: "bg-sky-500/15 text-sky-700 dark:text-sky-300" },
-  DELETE: { rotulo: "Excluiu", classe: "bg-destructive/15 text-destructive" },
+  DELETE: { rotulo: "Excluiu", classe: "bg-destructive/15 text-red-700 dark:text-red-300" },
 }
 const IGNORAR = new Set(["updated_at", "updated_by", "created_by"])
 

@@ -151,6 +151,38 @@
     @apply font-sans;
   }
 }
+/* Animações decorativas da landing feitas em CSS (rodam no compositor, sem JS) */
+@keyframes veios-deriva {
+  0%,
+  100% {
+    transform: translateX(0) scaleY(1);
+  }
+  50% {
+    transform: translateX(-4%) scaleY(1.04);
+  }
+}
+.veios-deriva {
+  animation: veios-deriva 22s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes serragem-sobe {
+  0% {
+    transform: translate(0, 0) rotate(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) rotate(180deg);
+    opacity: 0;
+  }
+}
+.serragem-particula {
+  animation: serragem-sobe 8s ease-out infinite;
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

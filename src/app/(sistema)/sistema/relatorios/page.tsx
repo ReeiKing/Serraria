@@ -101,8 +101,9 @@ export default async function RelatoriosPage({
           </Link>
         ))}
         <span
-          className="text-muted-foreground/50 cursor-not-allowed rounded-lg px-4 py-2 text-sm"
+          className="text-muted-foreground cursor-not-allowed rounded-lg px-4 py-2 text-sm italic"
           title="Disponível quando a emissão de NF-e for ativada"
+          aria-disabled="true"
         >
           NF-e emitidas (em breve)
         </span>
@@ -122,7 +123,12 @@ export default async function RelatoriosPage({
           <h2 className="font-heading text-lg font-semibold">{relatorio.titulo}</h2>
           <span className="text-muted-foreground text-sm">{relatorio.linhas.length} registros</span>
         </div>
-        <div className="max-h-[65vh] overflow-auto">
+        <div
+          className="focus-visible:ring-ring max-h-[65vh] overflow-auto focus-visible:ring-2 focus-visible:outline-none"
+          tabIndex={0}
+          role="region"
+          aria-label={`Tabela: ${relatorio.titulo}`}
+        >
           <table className="w-full text-sm">
             <thead className="bg-muted sticky top-0 z-10 text-left">
               <tr>

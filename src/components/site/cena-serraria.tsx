@@ -381,9 +381,11 @@ function Serra({ movimento }: { movimento: boolean }) {
   )
 }
 
+// menos partículas em telas pequenas (módulo só roda no navegador: ssr desligado)
+const N = typeof window !== "undefined" && window.innerWidth < 768 ? 450 : 900
+
 /** Serragem saindo do corte enquanto a lâmina está dentro da madeira. */
 function Serragem({ movimento }: { movimento: boolean }) {
-  const N = 900
   const pontos = useRef<THREE.Points>(null)
   const dados = useMemo(() => {
     const pos = new Float32Array(N * 3)
@@ -515,19 +517,26 @@ function Conjunto({ movimento }: { movimento: boolean }) {
 export default function CenaSerraria({
   movimento = true,
   ativo = true,
+  aoFicarPronta,
 }: {
   movimento?: boolean
   ativo?: boolean
+  /** Chamada após o primeiro quadro (para trocar a imagem de capa pela cena). */
+  aoFicarPronta?: () => void
 }) {
   return (
     <Canvas
       shadows
-      dpr={[1, 2]}
+      dpr={[1, 1.75]}
       frameloop={ativo ? "always" : "never"}
       camera={{ position: [1.2, 1.7, 5.4], fov: 36 }}
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       eventSource={typeof document !== "undefined" ? document.body : undefined}
-      onCreated={({ camera }) => camera.lookAt(0, 0.35, 0)}
+      onCreated={({ camera }) => {
+        camera.lookAt(0, 0.35, 0)
+        // espera o primeiro quadro desenhado antes de trocar a imagem de capa pela cena
+        requestAnimationFrame(() => requestAnimationFrame(() => aoFicarPronta?.()))
+      }}
       fallback={null}
     >
       <ambientLight intensity={0.35} color="#ffe2c2" />

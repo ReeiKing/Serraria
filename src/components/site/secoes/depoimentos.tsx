@@ -32,7 +32,7 @@ export function Depoimentos() {
     >
       <div className="mx-auto max-w-3xl px-4 md:px-6">
         <TituloSecao selo="Depoimentos" titulo="Quem compra, volta" />
-        <p className="text-alerta -mt-8 mb-8 text-center text-xs font-medium tracking-wide uppercase">
+        <p className="-mt-8 mb-8 text-center text-xs font-medium tracking-wide text-amber-800 uppercase dark:text-amber-300">
           Textos de exemplo — substitua por depoimentos reais em config/site.ts
         </p>
 
@@ -81,12 +81,17 @@ export function Depoimentos() {
                 key={i}
                 type="button"
                 aria-label={`Depoimento ${i + 1}`}
+                aria-current={i === indice}
                 onClick={() => setEstado([i, i > indice ? 1 : -1])}
-                className={cn(
-                  "h-2.5 rounded-full transition-all",
-                  i === indice ? "bg-primary w-8" : "bg-border hover:bg-primary/50 w-2.5"
-                )}
-              />
+                className="group flex h-6 min-w-6 items-center justify-center"
+              >
+                <span
+                  className={cn(
+                    "h-2.5 rounded-full transition-all",
+                    i === indice ? "bg-primary w-8" : "bg-border group-hover:bg-primary/50 w-2.5"
+                  )}
+                />
+              </button>
             ))}
           </div>
           <button

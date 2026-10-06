@@ -68,7 +68,7 @@ export function CaixaOrcamentos({ dados }: { dados: Orcamento[] }) {
             )}
           >
             {s ? STATUS[s].rotulo : "Todos"}
-            <span className="ml-1.5 text-xs opacity-70">
+            <span className="ml-1.5 text-xs opacity-90">
               {s ? dados.filter((o) => o.status === s).length : dados.length}
             </span>
           </button>

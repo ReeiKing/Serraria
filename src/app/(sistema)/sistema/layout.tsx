@@ -42,6 +42,10 @@ export default async function SistemaLayout({ children }: { children: React.Reac
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="bg-background/80 sticky top-0 z-30 flex h-14 items-center gap-2 border-b px-4 backdrop-blur">
           <MenuMobile nomeEmpresa={siteConfig.nome} contadores={contadores} />
+          <Link href="/sistema" className="flex items-center gap-2 lg:hidden" aria-label="Painel">
+            <Marca className="size-8 rounded-lg" />
+            <span className="font-heading font-semibold">{siteConfig.nomeCurto}</span>
+          </Link>
           <div className="ml-auto flex items-center gap-1">
             <AlternarTema />
             <MenuUsuario nome={usuario.nome} email={usuario.email} />
