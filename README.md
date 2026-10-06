@@ -3,7 +3,7 @@
 Sistema web para serraria de **Pinus** e **Eucalipto**: compra de toras, produção de madeira serrada,
 estoque, vendas com romaneio de carga e emissão de NF-e, além de uma landing page pública.
 
-> Status: **Fase 1 — setup** concluída. As próximas fases estão no fim deste arquivo.
+> Status: **Fases 1 e 2** concluídas (setup, banco e autenticação). As próximas fases estão no fim deste arquivo.
 > Por enquanto o projeto roda **somente na máquina local** (Supabase local, sem deploy).
 
 ## Stack
@@ -22,15 +22,29 @@ estoque, vendas com romaneio de carga e emissão de NF-e, além de uma landing p
 ## Requisitos
 
 - Node.js 20.9+ (testado com 24)
-- Para o banco local (a partir da Fase 2): Docker (Docker Desktop, OrbStack ou Colima) e a CLI do Supabase
+- Docker (OrbStack, Docker Desktop ou Colima) e a CLI do Supabase (`brew install supabase/tap/supabase`)
 
-## Como rodar
+## Como rodar (local)
 
 ```bash
 npm install
-cp .env.example .env.local   # preencha as variáveis
-npm run dev                  # http://localhost:3000
+npm run db:start             # sobe o Supabase local (Docker) e aplica migrations + seed
+cp .env.example .env.local   # use as chaves que o comando acima imprimir
+npm run dev                  # http://localhost:3000  ·  login em /login
 ```
+
+Serviços locais: Studio em http://127.0.0.1:54323 · e-mails de teste (Mailpit) em http://127.0.0.1:54324.
+
+### Usuários de desenvolvimento (criados pelo seed)
+
+| E-mail                      | Papel         | Senha      |
+| --------------------------- | ------------- | ---------- |
+| admin@madeireira.local      | Administrador | madeira123 |
+| escritorio@madeireira.local | Escritório    | madeira123 |
+| patio@madeireira.local      | Pátio         | madeira123 |
+
+O cadastro público está desligado: usuários são criados pelo administrador.
+`npm run db:reset` recria o banco do zero (migrations + seed).
 
 ## Scripts
 
@@ -53,13 +67,37 @@ src/
   components/ui/       componentes shadcn/ui
   components/providers tema (claro/escuro) e afins
   config/site.ts       nome, textos e contatos da empresa (personalize aqui)
-  db/                  conexão Drizzle, schema e migrations
+  db/index.ts          conexão Drizzle e `comUsuario` (transação com RLS do usuário)
+  db/gerado/           schema e relações Drizzle GERADOS do banco (não editar)
   lib/
     env.ts             variáveis de ambiente validadas com Zod (somente servidor)
     format.ts          formatação brasileira (R$, vírgula decimal, datas no fuso de SP)
+    auth/              sessão, papéis e `exigirUsuario`
     supabase/          clientes Supabase (browser, servidor e middleware)
-  middleware.ts        renovação da sessão do Supabase
+  middleware.ts        renova a sessão e protege /sistema
+supabase/
+  migrations/          SQL — fonte da verdade do banco (tabelas, gatilhos, RLS, storage)
+  seed.sql             dados de desenvolvimento
+  tests/               testes pgTAP
 ```
+
+## Banco de dados e segurança
+
+- **Migrations em SQL** (`supabase/migrations`) são a fonte da verdade; o Drizzle só introspecta
+  (`npm run db:pull`) para ter tipos no TypeScript.
+- Toda tabela tem `id` UUID, `created_at`/`updated_at` e `created_by`/`updated_by`, preenchidos
+  **pelo banco** (gatilho `private.tg_carimbo`) — o usuário nunca digita data/hora de registro.
+- **Auditoria**: gatilho em todas as tabelas de negócio grava antes/depois e o usuário em `auditoria`.
+- **Estoque**: o saldo só muda por movimentação (`estoque_mov`), atualizado na mesma transação,
+  com trava de linha; saldo negativo é bloqueado salvo confirmação explícita (`permitir_negativo`).
+  O kardex é imutável.
+- **RLS** ligado em todas as tabelas, com políticas por papel:
+  - _Administrador_: tudo. _Escritório_: cadastros, financeiro, vendas e fiscal.
+  - _Pátio_: entradas de toras, produção e estoque; consulta cargas; não vê NF-e, pagamentos nem auditoria.
+- No servidor, as ações do usuário rodam com `comUsuario()`, que abre a transação com o papel
+  `authenticated` e o JWT do usuário — o RLS vale também para as consultas via Drizzle.
+  `dbSistema` (sem RLS) fica reservado a rotinas sem usuário, como webhooks.
+- Papel do usuário fica em `usuarios.papel` (definido pelo admin / `app_metadata`), nunca em `user_metadata`.
 
 ## Convenções
 
@@ -71,7 +109,7 @@ src/
 ## Fases
 
 1. ✅ Setup
-2. Banco e autenticação (schema, migrations, seed, RLS, login)
+2. ✅ Banco e autenticação (schema, migrations, seed, RLS, login)
 3. Cálculos (`lib/calculos.ts`) com testes
 4. Cadastros
 5. Entrada de toras

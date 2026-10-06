@@ -14,9 +14,12 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run lint && npm run typecheck && npm run test",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:test": "supabase test db",
+    "db:pull": "drizzle-kit pull && node scripts/pos-db-pull.mjs && prettier --write src/db/gerado"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
