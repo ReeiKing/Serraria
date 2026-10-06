@@ -150,12 +150,6 @@ export const usersInAuthRelations = relations(usersInAuth, ({ many }) => ({
   producoesItens_updatedBy: many(producoesItens, {
     relationName: "producoesItens_updatedBy_usersInAuth_id",
   }),
-  vendas_createdBy: many(vendas, {
-    relationName: "vendas_createdBy_usersInAuth_id",
-  }),
-  vendas_updatedBy: many(vendas, {
-    relationName: "vendas_updatedBy_usersInAuth_id",
-  }),
   vendasItens_createdBy: many(vendasItens, {
     relationName: "vendasItens_createdBy_usersInAuth_id",
   }),
@@ -193,6 +187,12 @@ export const usersInAuthRelations = relations(usersInAuth, ({ many }) => ({
     relationName: "orcamentosSite_updatedBy_usersInAuth_id",
   }),
   auditorias: many(auditoria),
+  vendas_createdBy: many(vendas, {
+    relationName: "vendas_createdBy_usersInAuth_id",
+  }),
+  vendas_updatedBy: many(vendas, {
+    relationName: "vendas_updatedBy_usersInAuth_id",
+  }),
   especies_createdBy: many(especies, {
     relationName: "especies_createdBy_usersInAuth_id",
   }),
@@ -491,6 +491,9 @@ export const estoqueMovRelations = relations(estoqueMov, ({ one }) => ({
 
 export const vendasRelations = relations(vendas, ({ one, many }) => ({
   estoqueMovs: many(estoqueMov),
+  vendasItens: many(vendasItens),
+  romaneios: many(romaneios),
+  notasFiscais: many(notasFiscais),
   cliente: one(clientes, {
     fields: [vendas.clienteId],
     references: [clientes.id],
@@ -513,9 +516,6 @@ export const vendasRelations = relations(vendas, ({ one, many }) => ({
     fields: [vendas.veiculoId],
     references: [veiculos.id],
   }),
-  vendasItens: many(vendasItens),
-  romaneios: many(romaneios),
-  notasFiscais: many(notasFiscais),
 }))
 
 export const producoesItensRelations = relations(producoesItens, ({ one }) => ({

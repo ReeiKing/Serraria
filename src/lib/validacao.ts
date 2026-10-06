@@ -147,11 +147,13 @@ export const zInteiro = (o: OpcoesNumero = {}) =>
     `${o.rotulo ?? "Quantidade"} deve ser um número inteiro`
   )
 
-export const zUuid = (rotulo = "Item") => z.string().uuid(`Selecione ${rotulo.toLowerCase()}`)
+// z.guid() aceita qualquer UUID no formato 8-4-4-4-12 (o Postgres aceita todos;
+// z.uuid() do Zod 4 exige a versão RFC e recusaria ids como 20000000-0000-…).
+export const zUuid = (rotulo = "Item") => z.guid(`Selecione ${rotulo.toLowerCase()}`)
 export const zUuidOpcional = z
   .string()
   .transform((v) => (v === "" ? null : v))
-  .pipe(z.string().uuid().nullable())
+  .pipe(z.guid("Seleção inválida").nullable())
 
 /** Data no formato yyyy-MM-dd (input type="date"). */
 export const zData = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida")

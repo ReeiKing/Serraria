@@ -27,7 +27,6 @@ export const MENU: ItemMenu[] = [
     titulo: "Vendas e romaneios",
     href: "/sistema/vendas",
     icone: Tags,
-    emBreve: true,
   },
   {
     titulo: "Notas fiscais",

@@ -1077,101 +1077,6 @@ export const producoesItens = pgTable(
   ]
 )
 
-export const vendas = pgTable(
-  "vendas",
-  {
-    id: uuid().defaultRandom().primaryKey().notNull(),
-    // You can use { mode: "bigint" } if numbers are exceeding js number limitations
-    numero: bigint({ mode: "number" }).generatedAlwaysAsIdentity({
-      name: "vendas_numero_seq",
-      startWith: 1,
-      increment: 1,
-      minValue: 1,
-      maxValue: 9223372036854775807,
-      cache: 1,
-    }),
-    clienteId: uuid("cliente_id").notNull(),
-    motoristaId: uuid("motorista_id"),
-    veiculoId: uuid("veiculo_id"),
-    placa: text(),
-    destinoCep: text("destino_cep"),
-    destinoLogradouro: text("destino_logradouro"),
-    destinoNumero: text("destino_numero"),
-    destinoComplemento: text("destino_complemento"),
-    destinoBairro: text("destino_bairro"),
-    destinoMunicipio: text("destino_municipio"),
-    destinoCodigoIbge: text("destino_codigo_ibge"),
-    destinoUf: char("destino_uf", { length: 2 }),
-    tipoFrete: tipoFrete("tipo_frete").default("sem_frete").notNull(),
-    valorFrete: numeric("valor_frete", { precision: 14, scale: 2 }).default("0").notNull(),
-    desconto: numeric({ precision: 14, scale: 2 }).default("0").notNull(),
-    totalPecas: integer("total_pecas").default(0).notNull(),
-    totalM3: numeric("total_m3", { precision: 14, scale: 6 }).default("0").notNull(),
-    valorProdutos: numeric("valor_produtos", { precision: 14, scale: 2 }).default("0").notNull(),
-    valorTotal: numeric("valor_total", { precision: 14, scale: 2 }).default("0").notNull(),
-    status: statusVenda().default("rascunho").notNull(),
-    documentoFlorestal: text("documento_florestal"),
-    observacoes: text(),
-    confirmadaEm: timestamp("confirmada_em", { withTimezone: true, mode: "string" }),
-    entregueEm: timestamp("entregue_em", { withTimezone: true, mode: "string" }),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
-      .defaultNow()
-      .notNull(),
-    createdBy: uuid("created_by"),
-    updatedBy: uuid("updated_by"),
-  },
-  (table) => [
-    index("vendas_cliente").using("btree", table.clienteId.asc().nullsLast().op("uuid_ops")),
-    index("vendas_created_at").using(
-      "btree",
-      table.createdAt.desc().nullsFirst().op("timestamptz_ops")
-    ),
-    index("vendas_motorista").using("btree", table.motoristaId.asc().nullsLast().op("uuid_ops")),
-    index("vendas_status").using("btree", table.status.asc().nullsLast().op("enum_ops")),
-    index("vendas_veiculo").using("btree", table.veiculoId.asc().nullsLast().op("uuid_ops")),
-    foreignKey({
-      columns: [table.clienteId],
-      foreignColumns: [clientes.id],
-      name: "vendas_cliente_id_fkey",
-    }),
-    foreignKey({
-      columns: [table.createdBy],
-      foreignColumns: [users.id],
-      name: "vendas_created_by_fkey",
-    }).onDelete("set null"),
-    foreignKey({
-      columns: [table.motoristaId],
-      foreignColumns: [motoristas.id],
-      name: "vendas_motorista_id_fkey",
-    }),
-    foreignKey({
-      columns: [table.updatedBy],
-      foreignColumns: [users.id],
-      name: "vendas_updated_by_fkey",
-    }).onDelete("set null"),
-    foreignKey({
-      columns: [table.veiculoId],
-      foreignColumns: [veiculos.id],
-      name: "vendas_veiculo_id_fkey",
-    }),
-    unique("vendas_numero_key").on(table.numero),
-    pgPolicy("usuario ativo", {
-      as: "permissive",
-      for: "all",
-      to: ["authenticated"],
-      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
-      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
-    }),
-    check("vendas_desconto_check", sql`desconto >= (0)::numeric`),
-    check("vendas_destino_cep_check", sql`destino_cep ~ '^\d{8}$'::text`),
-    check("vendas_destino_codigo_ibge_check", sql`destino_codigo_ibge ~ '^\d{7}$'::text`),
-    check("vendas_valor_frete_check", sql`valor_frete >= (0)::numeric`),
-  ]
-)
-
 export const vendasItens = pgTable(
   "vendas_itens",
   {
@@ -1583,6 +1488,103 @@ export const auditoria = pgTable(
       "auditoria_acao_check",
       sql`acao = ANY (ARRAY['INSERT'::text, 'UPDATE'::text, 'DELETE'::text])`
     ),
+  ]
+)
+
+export const vendas = pgTable(
+  "vendas",
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    // You can use { mode: "bigint" } if numbers are exceeding js number limitations
+    numero: bigint({ mode: "number" }).generatedAlwaysAsIdentity({
+      name: "vendas_numero_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 9223372036854775807,
+      cache: 1,
+    }),
+    clienteId: uuid("cliente_id").notNull(),
+    motoristaId: uuid("motorista_id"),
+    veiculoId: uuid("veiculo_id"),
+    placa: text(),
+    destinoCep: text("destino_cep"),
+    destinoLogradouro: text("destino_logradouro"),
+    destinoNumero: text("destino_numero"),
+    destinoComplemento: text("destino_complemento"),
+    destinoBairro: text("destino_bairro"),
+    destinoMunicipio: text("destino_municipio"),
+    destinoCodigoIbge: text("destino_codigo_ibge"),
+    destinoUf: char("destino_uf", { length: 2 }),
+    tipoFrete: tipoFrete("tipo_frete").default("sem_frete").notNull(),
+    valorFrete: numeric("valor_frete", { precision: 14, scale: 2 }).default("0").notNull(),
+    desconto: numeric({ precision: 14, scale: 2 }).default("0").notNull(),
+    totalPecas: integer("total_pecas").default(0).notNull(),
+    totalM3: numeric("total_m3", { precision: 14, scale: 6 }).default("0").notNull(),
+    valorProdutos: numeric("valor_produtos", { precision: 14, scale: 2 }).default("0").notNull(),
+    valorTotal: numeric("valor_total", { precision: 14, scale: 2 }).default("0").notNull(),
+    status: statusVenda().default("rascunho").notNull(),
+    documentoFlorestal: text("documento_florestal"),
+    observacoes: text(),
+    confirmadaEm: timestamp("confirmada_em", { withTimezone: true, mode: "string" }),
+    entregueEm: timestamp("entregue_em", { withTimezone: true, mode: "string" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    createdBy: uuid("created_by"),
+    updatedBy: uuid("updated_by"),
+    canceladaEm: timestamp("cancelada_em", { withTimezone: true, mode: "string" }),
+    motivoCancelamento: text("motivo_cancelamento"),
+  },
+  (table) => [
+    index("vendas_cliente").using("btree", table.clienteId.asc().nullsLast().op("uuid_ops")),
+    index("vendas_created_at").using(
+      "btree",
+      table.createdAt.desc().nullsFirst().op("timestamptz_ops")
+    ),
+    index("vendas_motorista").using("btree", table.motoristaId.asc().nullsLast().op("uuid_ops")),
+    index("vendas_status").using("btree", table.status.asc().nullsLast().op("enum_ops")),
+    index("vendas_veiculo").using("btree", table.veiculoId.asc().nullsLast().op("uuid_ops")),
+    foreignKey({
+      columns: [table.clienteId],
+      foreignColumns: [clientes.id],
+      name: "vendas_cliente_id_fkey",
+    }),
+    foreignKey({
+      columns: [table.createdBy],
+      foreignColumns: [users.id],
+      name: "vendas_created_by_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.motoristaId],
+      foreignColumns: [motoristas.id],
+      name: "vendas_motorista_id_fkey",
+    }),
+    foreignKey({
+      columns: [table.updatedBy],
+      foreignColumns: [users.id],
+      name: "vendas_updated_by_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.veiculoId],
+      foreignColumns: [veiculos.id],
+      name: "vendas_veiculo_id_fkey",
+    }),
+    unique("vendas_numero_key").on(table.numero),
+    pgPolicy("usuario ativo", {
+      as: "permissive",
+      for: "all",
+      to: ["authenticated"],
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+    }),
+    check("vendas_desconto_check", sql`desconto >= (0)::numeric`),
+    check("vendas_destino_cep_check", sql`destino_cep ~ '^\d{8}$'::text`),
+    check("vendas_destino_codigo_ibge_check", sql`destino_codigo_ibge ~ '^\d{7}$'::text`),
+    check("vendas_valor_frete_check", sql`valor_frete >= (0)::numeric`),
   ]
 )
 
