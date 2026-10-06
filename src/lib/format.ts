@@ -81,3 +81,46 @@ export function formatData(data: Date | string | number): string {
 export function agoraSP(): TZDate {
   return TZDate.tz(FUSO_HORARIO)
 }
+
+/** 11222333000181 → 11.222.333/0001-81 · 52998224725 → 529.982.247-25 */
+export function formatDocumento(doc: string | null | undefined): string {
+  const d = (doc ?? "").replace(/\D/g, "")
+  if (d.length === 14) return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")
+  if (d.length === 11) return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4")
+  return doc ?? ""
+}
+
+/** 84000000 → 84000-000 */
+export function formatCep(cep: string | null | undefined): string {
+  const d = (cep ?? "").replace(/\D/g, "")
+  return d.length === 8 ? `${d.slice(0, 5)}-${d.slice(5)}` : (cep ?? "")
+}
+
+/** 42999990000 → (42) 99999-0000 */
+export function formatTelefone(tel: string | null | undefined): string {
+  const d = (tel ?? "").replace(/\D/g, "")
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`
+  return tel ?? ""
+}
+
+/** ABC1D23 → ABC-1D23 */
+export function formatPlaca(placa: string | null | undefined): string {
+  const p = placa ?? ""
+  return p.length === 7 ? `${p.slice(0, 3)}-${p.slice(3)}` : p
+}
+
+/** Número para exibir num campo de formulário (vírgula decimal, sem milhar). */
+export function numeroParaCampo(v: number | string | null | undefined): string {
+  if (v === null || v === undefined || v === "") return ""
+  return String(Number(v)).replace(".", ",")
+}
+
+/** Medida da peça: 1,8 × 9 × 1,20 */
+export function formatBitola(
+  espCm: number | string,
+  largCm: number | string,
+  compM: number | string
+): string {
+  return `${formatNumero(espCm, 0, 2)} × ${formatNumero(largCm, 0, 2)} × ${formatNumero(compM, 2, 3)}`
+}

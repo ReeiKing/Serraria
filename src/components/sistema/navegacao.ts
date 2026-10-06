@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   Tags,
   Truck,
-  Users,
   type LucideIcon,
 } from "lucide-react"
 
@@ -36,12 +35,11 @@ export const MENU: ItemMenu[] = [
     icone: FileText,
     emBreve: true,
   },
-  { titulo: "Cadastros", href: "/sistema/cadastros", icone: Building2, emBreve: true },
+  { titulo: "Cadastros", href: "/sistema/cadastros", icone: Building2 },
   {
     titulo: "Relatórios",
     href: "/sistema/relatorios",
     icone: BarChart3,
     emBreve: true,
   },
-  { titulo: "Usuários", href: "/sistema/usuarios", icone: Users, emBreve: true },
 ]
