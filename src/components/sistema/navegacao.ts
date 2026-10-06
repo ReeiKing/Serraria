@@ -20,7 +20,7 @@ export type ItemMenu = {
 
 export const MENU: ItemMenu[] = [
   { titulo: "Painel", href: "/sistema", icone: LayoutDashboard },
-  { titulo: "Entrada de toras", href: "/sistema/entradas", icone: Truck, emBreve: true },
+  { titulo: "Entrada de toras", href: "/sistema/entradas", icone: Truck },
   { titulo: "Produção", href: "/sistema/producao", icone: Factory, emBreve: true },
   { titulo: "Estoque", href: "/sistema/estoque", icone: Boxes, emBreve: true },
   {

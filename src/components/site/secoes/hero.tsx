@@ -1,12 +1,19 @@
 "use client"
 
-import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion"
+import { motion, useInView, useReducedMotion, useScroll, useTransform } from "framer-motion"
+import dynamic from "next/dynamic"
 import { ChevronDown, MessageCircle, ShieldCheck } from "lucide-react"
 import { useRef } from "react"
 
 import { BotaoAnimado } from "@/components/site/botao-animado"
-import { AneisTora, SerraCircular, Serragem, VeiosMadeira } from "@/components/site/textura-madeira"
+import { Serragem, VeiosMadeira } from "@/components/site/textura-madeira"
 import { linkWhatsApp, siteConfig } from "@/config/site"
+
+// three.js só no navegador e carregado sob demanda (não pesa no primeiro carregamento)
+const CenaSerraria = dynamic(() => import("@/components/site/cena-serraria"), {
+  ssr: false,
+  loading: () => <div className="size-full animate-pulse rounded-full bg-amber-900/20" />,
+})
 
 const cascata = {
   oculto: {},
@@ -25,6 +32,8 @@ const item = {
 export function Hero() {
   const ref = useRef<HTMLElement>(null)
   const reduzir = useReducedMotion()
+  const refArte = useRef<HTMLDivElement>(null)
+  const arteVisivel = useInView(refArte, { margin: "100px" })
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] })
   const yArte = useTransform(scrollYProgress, [0, 1], [0, reduzir ? 0 : 140])
   const opacidade = useTransform(scrollYProgress, [0, 0.8], [1, 0])
@@ -106,42 +115,21 @@ export function Hero() {
           </motion.a>
         </motion.div>
 
-        {/* Arte: tora com anéis + serra girando + tábuas */}
+        {/* Arte 3D: tora sendo cortada pela serra circular */}
         <motion.div
+          ref={refArte}
           style={{ y: yArte }}
-          className="relative mx-auto aspect-square w-full max-w-md lg:max-w-lg"
+          initial={reduzir ? false : { opacity: 0, scale: 0.92 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1, delay: 0.2 }}
+          className="relative mx-auto aspect-square w-full max-w-md lg:max-w-none"
         >
-          <motion.div
-            initial={reduzir ? false : { scale: 0.6, opacity: 0, rotate: -30 }}
-            animate={{ scale: 1, opacity: 1, rotate: 0 }}
-            transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute inset-[8%] drop-shadow-[0_30px_60px_rgba(0,0,0,0.55)]"
-          >
-            <AneisTora className="size-full" />
-          </motion.div>
-          <motion.div
-            initial={reduzir ? false : { x: 120, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ duration: 1, delay: 0.6, ease: "easeOut" }}
-            className="absolute -top-2 -right-2 w-[42%] drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)]"
-          >
-            <SerraCircular className="size-full" velocidade={3} />
-          </motion.div>
-          {/* tábuas empilhadas */}
-          <div className="absolute -bottom-4 -left-4 flex w-[62%] flex-col gap-1.5">
-            {[0, 1, 2].map((i) => (
-              <motion.div
-                key={i}
-                initial={reduzir ? false : { x: -160, opacity: 0 }}
-                animate={{ x: i * 14, opacity: 1 }}
-                transition={{ duration: 0.8, delay: 1 + i * 0.15, ease: [0.22, 1, 0.36, 1] }}
-                className="h-7 rounded-md border border-amber-900/40 bg-gradient-to-b from-amber-300 to-amber-500 shadow-xl"
-                style={{
-                  backgroundImage:
-                    "repeating-linear-gradient(90deg, rgba(120,53,15,0.18) 0 2px, transparent 2px 22px), linear-gradient(to bottom, #fcd34d, #d97706)",
-                }}
-              />
-            ))}
+          <div
+            aria-hidden
+            className="absolute inset-[15%] rounded-full bg-orange-500/20 blur-3xl"
+          />
+          <div className="absolute inset-0 [mask-image:radial-gradient(closest-side,black_72%,transparent)]">
+            <CenaSerraria movimento={!reduzir} ativo={arteVisivel} />
           </div>
         </motion.div>
       </div>

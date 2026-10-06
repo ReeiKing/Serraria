@@ -1,10 +1,21 @@
 "use client"
 
-import type { ReactNode } from "react"
+import { Check, ChevronsUpDown } from "lucide-react"
+import { useState, type ReactNode } from "react"
 import { Controller, useFormContext } from "react-hook-form"
 
+import { Button } from "@/components/ui/button"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Select,
   SelectContent,
@@ -42,8 +53,13 @@ export function CampoTexto({
   className,
   disabled,
   acao,
+  inputClassName,
   ...input
-}: Base & Omit<React.ComponentProps<typeof Input>, "name"> & { acao?: ReactNode }) {
+}: Base &
+  Omit<React.ComponentProps<typeof Input>, "name"> & {
+    acao?: ReactNode
+    inputClassName?: string
+  }) {
   const { control, erro } = useCampo(name)
   return (
     <Field data-invalid={!!erro} className={className}>
@@ -57,6 +73,7 @@ export function CampoTexto({
               id={name}
               aria-invalid={!!erro}
               disabled={disabled}
+              className={inputClassName}
               {...input}
               {...field}
               value={field.value ?? ""}
@@ -220,3 +237,107 @@ export function CampoSwitch(props: Base) {
     </Field>
   )
 }
+
+/** Select com busca (digite para filtrar) — bom para listas longas: fornecedores, placas… */
+export function CampoBusca({
+  opcoes,
+  placeholder = "Selecione",
+  vazio = "Nada encontrado.",
+  permitirVazio,
+  aoMudar,
+  ...props
+}: Base & {
+  opcoes: (OpcaoSelect & { detalhe?: string })[]
+  placeholder?: string
+  vazio?: string
+  permitirVazio?: boolean
+  aoMudar?: (v: string) => void
+}) {
+  const { control, erro } = useCampo(props.name)
+  const [aberto, setAberto] = useState(false)
+  return (
+    <Field data-invalid={!!erro} className={props.className}>
+      <FieldLabel htmlFor={props.name}>{props.label}</FieldLabel>
+      <Controller
+        name={props.name}
+        control={control}
+        render={({ field }) => {
+          const atual = opcoes.find((o) => o.valor === field.value)
+          return (
+            <Popover open={aberto} onOpenChange={setAberto}>
+              <PopoverTrigger asChild>
+                <Button
+                  id={props.name}
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={aberto}
+                  aria-invalid={!!erro}
+                  disabled={props.disabled}
+                  className="h-11 w-full justify-between font-normal"
+                >
+                  <span className={cn("truncate", !atual && "text-muted-foreground")}>
+                    {atual?.rotulo ?? placeholder}
+                  </span>
+                  <ChevronsUpDown className="opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+                <Command
+                  filter={(valor, busca) => (semAcento(valor).includes(semAcento(busca)) ? 1 : 0)}
+                >
+                  <CommandInput placeholder="Digite para buscar…" />
+                  <CommandList>
+                    <CommandEmpty>{vazio}</CommandEmpty>
+                    <CommandGroup>
+                      {permitirVazio && (
+                        <CommandItem
+                          value="— nenhum —"
+                          onSelect={() => {
+                            field.onChange("")
+                            aoMudar?.("")
+                            setAberto(false)
+                          }}
+                        >
+                          — Nenhum —
+                        </CommandItem>
+                      )}
+                      {opcoes.map((o) => (
+                        <CommandItem
+                          key={o.valor}
+                          value={`${o.rotulo} ${o.detalhe ?? ""} ${o.valor}`}
+                          onSelect={() => {
+                            field.onChange(o.valor)
+                            aoMudar?.(o.valor)
+                            setAberto(false)
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "size-4",
+                              o.valor === field.value ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <span className="flex flex-col">
+                            {o.rotulo}
+                            {o.detalhe && (
+                              <span className="text-muted-foreground text-xs">{o.detalhe}</span>
+                            )}
+                          </span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          )
+        }}
+      />
+      {props.descricao && <FieldDescription>{props.descricao}</FieldDescription>}
+      <FieldError errors={[erro]} />
+    </Field>
+  )
+}
+
+const semAcento = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()

@@ -38,8 +38,8 @@ export function formatPercentual(valor: Numerico): string {
 /**
  * Converte texto digitado no padrão brasileiro em número.
  * - Com vírgula: "1,8" → 1.8 · "1.234,56" → 1234.56
- * - Sem vírgula e um único ponto: tratado como decimal ("1.8" → 1.8)
- * - Sem vírgula e vários pontos: separadores de milhar ("1.234.567" → 1234567)
+ * - Sem vírgula, ponto seguido de grupos de 3 dígitos: milhar ("45.300" → 45300, "1.234.567" → 1234567)
+ * - Sem vírgula e outro uso do ponto: decimal ("1.8" → 1.8, "0.125" → 0.125)
  * Retorna `null` quando o texto não é um número válido.
  */
 export function parseNumeroBR(texto: string | number | null | undefined): number | null {
@@ -53,7 +53,7 @@ export function parseNumeroBR(texto: string | number | null | undefined): number
   const inteiro = String.raw`(\d+|\d{1,3}(\.\d{3})+)`
   if (new RegExp(String.raw`^-?(${inteiro})?,\d*$`).test(s) && /\d/.test(s)) {
     s = s.replace(/\./g, "").replace(",", ".")
-  } else if (new RegExp(String.raw`^-?\d{1,3}(\.\d{3}){2,}$`).test(s)) {
+  } else if (new RegExp(String.raw`^-?[1-9]\d{0,2}(\.\d{3})+$`).test(s)) {
     s = s.replace(/\./g, "")
   } else if (!/^-?(\d+\.?\d*|\.\d+)$/.test(s)) {
     return null

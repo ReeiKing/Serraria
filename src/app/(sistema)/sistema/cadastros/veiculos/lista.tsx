@@ -86,7 +86,7 @@ export function ListaVeiculos({
               label="Placa"
               autoFocus
               placeholder="ABC1D23"
-              className="uppercase"
+              inputClassName="uppercase"
             />
             <CampoSelect name="tipo" label="Tipo" opcoes={[...TIPOS_VEICULO]} />
             <CampoNumero
