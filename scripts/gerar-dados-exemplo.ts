@@ -7,7 +7,7 @@ import { writeFileSync } from "node:fs"
 import { paraNumeric } from "../src/lib/calculos"
 import { calcularEntrada, type DadosMedicao } from "../src/lib/entradas"
 import { calcularProducao } from "../src/lib/producao"
-import { calcularVenda, descricaoItem } from "../src/lib/vendas"
+import { calcularVenda, descricaoItem, descricaoProduto } from "../src/lib/vendas"
 
 const SECRETARIA = "00000000-0000-0000-0000-000000000001"
 
@@ -220,6 +220,20 @@ const clientes = [
     num: "640",
     bairro: "Centro",
   },
+  {
+    razao: "Hortifrúti Campos Gerais Ltda",
+    fantasia: "Hortifrúti CG",
+    doc: dvCnpj("778899000001"),
+    ie: "9011223344",
+    ind: 1,
+    mun: "Ponta Grossa",
+    ibge: "4119905",
+    uf: "PR",
+    cep: "84015000",
+    log: "Rua Comendador Miró",
+    num: "980",
+    bairro: "Centro",
+  },
 ]
 clientes.forEach((c, i) =>
   sql(
@@ -360,6 +374,10 @@ sql("alter table public.entradas_toras_pagamentos enable trigger carimbo;")
 sql("")
 sql("-- @@ PRODUCAO @@")
 const TABELAS_HIST = [
+  "produtos",
+  "producoes_produtos",
+  "producoes_produtos_itens",
+  "produtos_mov",
   "producoes",
   "producoes_itens",
   "estoque_mov",
@@ -516,7 +534,7 @@ for (let i = 0; i < N_VENDAS; i++) {
       larguraCm: x.it.b[1],
       comprimentoM: x.it.b[2],
       quantidade: x.qtd,
-      precoM3: x.preco,
+      preco: x.preco,
     })),
     valorFrete,
     0
@@ -565,6 +583,135 @@ for (let i = 0; i < N_VENDAS; i++) {
         })
       )
     }
+  }
+}
+
+// ---------------------------------------------------------------- paletes e caixotes (vendidos por unidade)
+const PRODUTOS = [
+  {
+    nome: "Palete PBR",
+    categoria: "palete",
+    dimensoes: "1,00 × 1,20 m",
+    preco: 72,
+    ncm: "44152000",
+    minimo: 30,
+    lote: [20, 60],
+    especie: "Pinus",
+    desc: "Padrão PBR, 4 entradas",
+  },
+  {
+    nome: "Palete descartável",
+    categoria: "palete",
+    dimensoes: "1,00 × 1,20 m",
+    preco: 28.5,
+    ncm: "44152000",
+    minimo: 50,
+    lote: [40, 120],
+    especie: "Pinus",
+    desc: "Uso único, para envio sem retorno",
+  },
+  {
+    nome: "Caixote de feira",
+    categoria: "caixote",
+    dimensoes: "Padrão hortifrúti",
+    preco: 6.8,
+    ncm: "44151000",
+    minimo: 200,
+    lote: [150, 400],
+    especie: "Eucalipto",
+    desc: "Caixote de madeira para frutas e legumes",
+  },
+]
+PRODUTOS.forEach((p, k) =>
+  sql(
+    `insert into public.produtos (id, nome, categoria, descricao, dimensoes, especie_id, ncm, preco_venda, estoque_minimo, created_at, updated_at, created_by) values (${q(id("9", k + 1))}, ${q(p.nome)}, ${q(p.categoria)}, ${q(p.desc)}, ${q(p.dimensoes)}, (select id from public.especies where nome = ${q(p.especie)}), ${q(p.ncm)}, ${p.preco}, ${p.minimo}, ${tsql(inicio)}, ${tsql(inicio)}, ${q(SECRETARIA)});`
+  )
+)
+const montado: { ts: number; k: number; qtd: number }[] = []
+const vendidoProd = new Map<number, number>()
+const dispProduto = (k: number, ate: number) =>
+  montado.filter((m) => m.k === k && m.ts <= ate).reduce((a, m) => a + m.qtd, 0) -
+  (vendidoProd.get(k) ?? 0)
+
+const N_MONT = 18
+for (let i = 0; i < N_MONT; i++) {
+  const quando =
+    inicio + 2 * 86_400_000 + ((fim - inicio - 2 * 86_400_000) * i) / (N_MONT - 1) + 9 * 3600_000
+  const ts = tsql(quando)
+  const mid = id("a", i + 1)
+  const linhas = PRODUTOS.map((p, k) => ({
+    k,
+    qtd: Math.round((p.lote[0]! + r() * (p.lote[1]! - p.lote[0]!)) / 10) * 10,
+  })).filter((_, k) => k === 2 || r() < 0.75)
+  const ls = [
+    `insert into public.producoes_produtos (id, data_producao, total_unidades, created_at, updated_at, created_by) values (${q(mid)}, ${dsql(quando)}, ${linhas.reduce((a, l) => a + l.qtd, 0)}, ${ts}, ${ts}, ${q(SECRETARIA)});`,
+  ]
+  for (const l of linhas) {
+    montado.push({ ts: quando, k: l.k, qtd: l.qtd })
+    ls.push(
+      `insert into public.producoes_produtos_itens (producao_id, produto_id, quantidade, created_at, updated_at, created_by) values (${q(mid)}, ${q(id("9", l.k + 1))}, ${l.qtd}, ${ts}, ${ts}, ${q(SECRETARIA)});`,
+      `insert into public.produtos_mov (produto_id, tipo, quantidade, producao_id, observacao, created_at, updated_at, created_by) values (${q(id("9", l.k + 1))}, 'producao', ${l.qtd}, ${q(mid)}, ${q(`Montagem nº ${i + 1}`)}, ${ts}, ${ts}, ${q(SECRETARIA)});`
+    )
+  }
+  evento(quando, ls)
+}
+
+// vendas de produtos: paletes para a fábrica de paletes e a indústria de embalagens; caixotes para o hortifrúti
+const COMPRADORES: { cliente: number; produtos: number[] }[] = [
+  { cliente: 2, produtos: [0, 1] }, // Paletes Sul
+  { cliente: 5, produtos: [1] }, // Embalagens Norte Paraná
+  { cliente: clientes.length - 1, produtos: [2] }, // Hortifrúti CG
+  { cliente: 1, produtos: [0] }, // Marcenaria Bom Lar
+]
+const N_VENDAS_PROD = 16
+const inicioProd = inicio + 8 * 86_400_000
+for (let i = 0; i < N_VENDAS_PROD; i++) {
+  const quando =
+    inicioProd + ((fim + 18 * 3600_000 - inicioProd) * i) / (N_VENDAS_PROD - 1) + 14 * 3600_000
+  const comprador = COMPRADORES[i % COMPRADORES.length]!
+  const ci = comprador.cliente
+  const cliente = clientes[ci]!
+  const itensP = comprador.produtos
+    .map((k) => {
+      const disp = dispProduto(k, quando)
+      const qtd = Math.min(disp, Math.round((disp * (0.35 + r() * 0.35)) / 10) * 10)
+      return { k, qtd }
+    })
+    .filter((x) => x.qtd >= 10)
+  if (!itensP.length) continue
+  const idade = (fim - quando) / 86_400_000
+  const status = i === N_VENDAS_PROD - 1 ? "rascunho" : idade > 5 ? "entregue" : "confirmada"
+  const confirmada = status !== "rascunho"
+  const calc = calcularVenda(
+    itensP.map((x) => ({ unidade: "UN" as const, quantidade: x.qtd, preco: PRODUTOS[x.k]!.preco }))
+  )
+  const vi = Math.floor(r() * veiculos.length)
+  const veiculo = veiculos[vi]!
+  const vid = id("8", 100 + i)
+  const ts = tsql(quando)
+  const tsConf = tsql(quando + 90 * 60_000)
+  const tsEntregue = tsql(Math.min(quando + 20 * 3600_000, AGORA_REF - 3600_000))
+  const ls = [
+    `insert into public.vendas (id, cliente_id, motorista_id, veiculo_id, placa, destino_cep, destino_logradouro, destino_numero, destino_bairro, destino_municipio, destino_codigo_ibge, destino_uf, tipo_frete, valor_frete, desconto, total_pecas, total_unidades, total_m3, valor_produtos, valor_total, status, confirmada_em, entregue_em, created_at, updated_at, created_by) values (${q(vid)}, ${q(id("2", ci + 1))}, ${q(id("3", veiculo.mot))}, ${q(id("4", vi + 1))}, ${q(veiculo.placa)}, ${q(cliente.cep)}, ${q(cliente.log)}, ${q(cliente.num)}, ${q(cliente.bairro)}, ${q(cliente.mun)}, ${q(cliente.ibge)}, ${q(cliente.uf)}, 'fob', 0, 0, 0, ${calc.totalUnidades}, 0, ${q(paraNumeric(calc.valorProdutos, 2))}, ${q(paraNumeric(calc.valorTotal, 2))}, ${q(status)}, ${confirmada ? tsConf : "null"}, ${status === "entregue" ? tsEntregue : "null"}, ${ts}, ${ts}, ${q(SECRETARIA)});`,
+  ]
+  itensP.forEach((x, k) => {
+    const p = PRODUTOS[x.k]!
+    ls.push(
+      `insert into public.vendas_itens (venda_id, produto_id, unidade, descricao, quantidade, volume_m3, preco_unitario, valor_total, created_at, updated_at, created_by) values (${q(vid)}, ${q(id("9", x.k + 1))}, 'UN', ${q(descricaoProduto({ nome: p.nome, dimensoes: p.dimensoes }))}, ${x.qtd}, 0, ${p.preco}, ${q(paraNumeric(calc.linhas[k]!.valor, 2))}, ${ts}, ${ts}, ${q(SECRETARIA)});`
+    )
+  })
+  evento(quando, ls)
+  if (confirmada) {
+    const conf = [
+      `insert into public.romaneios (venda_id, emitido_em, created_at, updated_at, created_by) values (${q(vid)}, ${tsConf}, ${tsConf}, ${tsConf}, ${q(SECRETARIA)});`,
+    ]
+    for (const x of itensP) {
+      vendidoProd.set(x.k, (vendidoProd.get(x.k) ?? 0) + x.qtd)
+      conf.push(
+        `insert into public.produtos_mov (produto_id, tipo, quantidade, venda_id, observacao, created_at, updated_at, created_by) values (${q(id("9", x.k + 1))}, 'venda', ${-x.qtd}, ${q(vid)}, 'Venda de produtos', ${tsConf}, ${tsConf}, ${q(SECRETARIA)});`
+      )
+    }
+    evento(quando + 90 * 60_000, conf)
   }
 }
 

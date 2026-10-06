@@ -1,4 +1,14 @@
-import { Building2, Car, DollarSign, Factory, IdCard, TreePine, UserCog, Users } from "lucide-react"
+import {
+  Building2,
+  Car,
+  DollarSign,
+  Factory,
+  IdCard,
+  Package,
+  TreePine,
+  UserCog,
+  Users,
+} from "lucide-react"
 import Link from "next/link"
 
 import { CabecalhoPagina } from "@/components/sistema/cabecalho-pagina"
@@ -36,6 +46,12 @@ const ITENS = [
     titulo: "Espécies e qualidades",
     descricao: "Pinus, Eucalipto e as linhas 1ª/2ª/3ª",
     icone: Factory,
+  },
+  {
+    href: "produtos",
+    titulo: "Paletes e caixotes",
+    descricao: "Produtos vendidos por unidade (palete PBR, descartável, caixote…)",
+    icone: Package,
   },
   {
     href: "precos",

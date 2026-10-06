@@ -3,12 +3,21 @@
 import { eq, isNull, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 
-import { comUsuario, estoqueMov, estoqueTorasMov, producoes, producoesItens } from "@/db"
+import {
+  comUsuario,
+  estoqueMov,
+  estoqueTorasMov,
+  producoes,
+  producoesItens,
+  producoesProdutos,
+  producoesProdutosItens,
+  produtosMov,
+} from "@/db"
 import { executar } from "@/lib/acoes"
 import { paraNumeric } from "@/lib/calculos"
 import { obterItemEstoque } from "@/lib/estoque"
 import { calcularProducao } from "@/lib/producao"
-import { estornoSchema, producaoSchema } from "@/lib/schemas/producao"
+import { estornoSchema, producaoProdutosSchema, producaoSchema } from "@/lib/schemas/producao"
 
 function revalidar() {
   revalidatePath("/sistema/producao")
@@ -109,6 +118,67 @@ export async function estornarProducao(id: string, entrada: unknown) {
           unidade: "m3",
           producaoId: id,
           motivo: `Estorno da produção nº ${p.numero}`,
+        })
+      }
+    })
+    revalidar()
+  })
+}
+
+// ---------------------------------------------------------------- paletes, caixotes e outros produtos
+export async function salvarProducaoProdutos(entrada: unknown) {
+  return executar(async () => {
+    const d = producaoProdutosSchema.parse(entrada)
+    const id = await comUsuario(async (tx) => {
+      const [p] = await tx
+        .insert(producoesProdutos)
+        .values({
+          dataProducao: d.dataProducao,
+          totalUnidades: d.itens.reduce((a, i) => a + i.quantidade, 0),
+          observacoes: d.observacoes,
+        })
+        .returning({ id: producoesProdutos.id, numero: producoesProdutos.numero })
+      for (const item of d.itens) {
+        await tx
+          .insert(producoesProdutosItens)
+          .values({ producaoId: p!.id, produtoId: item.produtoId, quantidade: item.quantidade })
+        await tx.insert(produtosMov).values({
+          produtoId: item.produtoId,
+          tipo: "producao",
+          quantidade: item.quantidade,
+          producaoId: p!.id,
+          observacao: `Montagem nº ${p!.numero}`,
+        })
+      }
+      return p!.id
+    })
+    revalidar()
+    return { id }
+  })
+}
+
+export async function estornarProducaoProdutos(id: string, entrada: unknown) {
+  return executar(async () => {
+    const { motivo, permitirNegativo } = estornoSchema.parse(entrada)
+    await comUsuario(async (tx) => {
+      const [p] = await tx
+        .update(producoesProdutos)
+        .set({ estornadaEm: new Date().toISOString(), motivoEstorno: motivo })
+        .where(and(eq(producoesProdutos.id, id), isNull(producoesProdutos.estornadaEm)))
+        .returning({ numero: producoesProdutos.numero })
+      if (!p) throw new Error("Montagem não encontrada ou já estornada.")
+      const itens = await tx
+        .select()
+        .from(producoesProdutosItens)
+        .where(eq(producoesProdutosItens.producaoId, id))
+      for (const item of itens) {
+        await tx.insert(produtosMov).values({
+          produtoId: item.produtoId,
+          tipo: "producao",
+          quantidade: -item.quantidade,
+          producaoId: id,
+          permitirNegativo,
+          observacao: `Estorno da montagem nº ${p.numero}: ${motivo}`,
         })
       }
     })

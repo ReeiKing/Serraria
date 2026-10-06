@@ -101,12 +101,12 @@ const s = StyleSheet.create({
 })
 
 const COLS = [
-  { k: "especie", t: "Espécie", w: "13%" },
+  { k: "especie", t: "Item", w: "13%" },
   { k: "qualidade", t: "Qualidade", w: "12%" },
-  { k: "bitola", t: "Esp. × Larg. × Compr.", w: "22%" },
-  { k: "qtd", t: "Peças", w: "10%", dir: true },
+  { k: "bitola", t: "Medida", w: "22%" },
+  { k: "qtd", t: "Qtd.", w: "10%", dir: true },
   { k: "m3", t: "m³", w: "13%", dir: true },
-  { k: "preco", t: "R$/m³", w: "14%", dir: true },
+  { k: "preco", t: "Preço", w: "14%", dir: true },
   { k: "total", t: "Total", w: "16%", dir: true },
 ] as const
 
@@ -231,15 +231,26 @@ function Romaneio({ v, logo }: { v: VendaCompleta; logo: Buffer | null }) {
             ))}
           </View>
           {v.itens.map((i) => {
-            const cel: Record<string, string> = {
-              especie: i.especie,
-              qualidade: i.qualidade,
-              bitola: `${formatBitola(i.espessuraCm, i.larguraCm, i.comprimentoM)} m`,
-              qtd: i.quantidade.toLocaleString("pt-BR"),
-              m3: formatM3(i.volumeM3),
-              preco: formatMoeda(i.precoM3),
-              total: formatMoeda(i.valorTotal),
-            }
+            const cel: Record<string, string> =
+              i.unidade === "UN"
+                ? {
+                    especie: i.produto ?? "",
+                    qualidade: "—",
+                    bitola: i.dimensoes ?? "",
+                    qtd: `${i.quantidade.toLocaleString("pt-BR")} un.`,
+                    m3: "—",
+                    preco: `${formatMoeda(i.precoUnitario)}/un.`,
+                    total: formatMoeda(i.valorTotal),
+                  }
+                : {
+                    especie: i.especie ?? "",
+                    qualidade: i.qualidade ?? "",
+                    bitola: `${formatBitola(i.espessuraCm ?? 0, i.larguraCm ?? 0, i.comprimentoM ?? 0)} m`,
+                    qtd: i.quantidade.toLocaleString("pt-BR"),
+                    m3: formatM3(i.volumeM3),
+                    preco: formatMoeda(i.precoM3),
+                    total: formatMoeda(i.valorTotal),
+                  }
             return (
               <View key={i.id} style={s.tr} wrap={false}>
                 {COLS.map((col) => (
@@ -260,16 +271,27 @@ function Romaneio({ v, logo }: { v: VendaCompleta; logo: Buffer | null }) {
         </View>
 
         <View style={s.totais}>
-          <Campo
-            rotulo="Total de peças"
-            valor={venda.totalPecas.toLocaleString("pt-BR")}
-            largura="80pt"
-          />
-          <Campo
-            rotulo="Volume total"
-            valor={`${formatNumero(venda.totalM3, 3, 6)} m³`}
-            largura="90pt"
-          />
+          {venda.totalPecas > 0 && (
+            <Campo
+              rotulo="Peças de madeira"
+              valor={venda.totalPecas.toLocaleString("pt-BR")}
+              largura="75pt"
+            />
+          )}
+          {venda.totalPecas > 0 && (
+            <Campo
+              rotulo="Volume total"
+              valor={`${formatNumero(venda.totalM3, 3, 6)} m³`}
+              largura="80pt"
+            />
+          )}
+          {venda.totalUnidades > 0 && (
+            <Campo
+              rotulo="Unidades"
+              valor={venda.totalUnidades.toLocaleString("pt-BR")}
+              largura="60pt"
+            />
+          )}
           <Campo rotulo="Produtos" valor={formatMoeda(venda.valorProdutos)} largura="80pt" />
           {Number(venda.valorFrete) > 0 && (
             <Campo rotulo="Frete" valor={formatMoeda(venda.valorFrete)} largura="70pt" />

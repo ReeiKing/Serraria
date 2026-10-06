@@ -1,7 +1,7 @@
 -- Testes de banco (pgTAP): `supabase test db`
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(24);
 
 -- Helpers: assumir a identidade de um usuário
 create function pg_temp.logar(p_id uuid) returns void language sql as $$
@@ -80,6 +80,24 @@ select throws_ok($$
 $$, 'P0001', null, 'kardex é imutável');
 
 select ok((select count(*) from public.auditoria where tabela = 'entradas_toras' and usuario_id = :secretaria::uuid) > 0, 'auditoria registra quem criou');
+
+-- produtos vendidos por unidade
+insert into public.produtos (id, nome, categoria, preco_venda) values ('f6000000-0000-0000-0000-000000000001', 'Palete de teste pgTAP', 'palete', 50);
+select lives_ok($$
+  insert into public.produtos_mov (produto_id, tipo, quantidade) values ('f6000000-0000-0000-0000-000000000001', 'producao', 40)
+$$, 'produção de paletes entra no kardex de produtos');
+select is((select saldo_unidades from public.produtos where id = 'f6000000-0000-0000-0000-000000000001'), 40, 'saldo de produto atualizado pela movimentação');
+select throws_ok($$
+  update public.produtos set saldo_unidades = 999 where id = 'f6000000-0000-0000-0000-000000000001'
+$$, 'P0001', null, 'saldo de produto não pode ser editado direto');
+select throws_ok($$
+  insert into public.produtos_mov (produto_id, tipo, quantidade, motivo) values ('f6000000-0000-0000-0000-000000000001', 'ajuste', -41, 'perda')
+$$, 'P0001', null, 'produto também bloqueia saldo negativo');
+select throws_ok($$
+  insert into public.vendas_itens (venda_id, descricao, quantidade, volume_m3, unidade, produto_id, estoque_item_id, preco_unitario, valor_total)
+  select v.id, 'x', 1, 0, 'UN', 'f6000000-0000-0000-0000-000000000001', 'f3000000-0000-0000-0000-000000000001', 50, 50
+    from (select id from public.vendas limit 1) v
+$$, '23514', null, 'item de venda é madeira OU produto, nunca os dois');
 
 select pg_temp.sair();
 

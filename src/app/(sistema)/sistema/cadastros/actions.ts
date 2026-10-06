@@ -10,6 +10,7 @@ import {
   especies,
   fornecedores,
   motoristas,
+  produtos,
   qualidades,
   tabelaPrecos,
   usuarios,
@@ -26,6 +27,7 @@ import {
   motoristaSchema,
   novoUsuarioSchema,
   precoSchema,
+  produtoSchema,
   qualidadeSchema,
   senhaSchema,
   veiculoSchema,
@@ -104,6 +106,17 @@ export async function salvarPreco(id: string | null, entrada: unknown) {
 }
 export async function excluirPreco(id: string) {
   return excluirRegistro(tabelaPrecos, id, `${BASE}/precos`)
+}
+
+// ---------------------------------------------------------------- produtos por unidade
+export async function salvarProduto(id: string | null, entrada: unknown) {
+  return salvarRegistro(produtos, produtoSchema, id, entrada, `${BASE}/produtos`)
+}
+export async function excluirProduto(id: string) {
+  return excluirRegistro(produtos, id, `${BASE}/produtos`)
+}
+export async function ativarProduto(id: string, ativo: boolean) {
+  return definirAtivo(produtos, id, ativo, `${BASE}/produtos`)
 }
 
 // ---------------------------------------------------------------- empresa

@@ -10,6 +10,7 @@ import {
   estoqueItens,
   motoristas,
   notasFiscais,
+  produtos,
   qualidades,
   romaneios,
   usuarios,
@@ -50,6 +51,11 @@ export async function carregarVenda(tx: Tx, id: string) {
         volumeM3: vendasItens.volumeM3,
         precoM3: vendasItens.precoM3,
         valorTotal: vendasItens.valorTotal,
+        unidade: vendasItens.unidade,
+        produtoId: vendasItens.produtoId,
+        precoUnitario: vendasItens.precoUnitario,
+        produto: produtos.nome,
+        dimensoes: produtos.dimensoes,
         especie: especies.nome,
         qualidade: qualidades.nome,
         espessuraCm: estoqueItens.espessuraCm,
@@ -57,9 +63,10 @@ export async function carregarVenda(tx: Tx, id: string) {
         comprimentoM: estoqueItens.comprimentoM,
       })
       .from(vendasItens)
-      .innerJoin(estoqueItens, eq(estoqueItens.id, vendasItens.estoqueItemId))
-      .innerJoin(especies, eq(especies.id, estoqueItens.especieId))
-      .innerJoin(qualidades, eq(qualidades.id, estoqueItens.qualidadeId))
+      .leftJoin(estoqueItens, eq(estoqueItens.id, vendasItens.estoqueItemId))
+      .leftJoin(especies, eq(especies.id, estoqueItens.especieId))
+      .leftJoin(qualidades, eq(qualidades.id, estoqueItens.qualidadeId))
+      .leftJoin(produtos, eq(produtos.id, vendasItens.produtoId))
       .where(eq(vendasItens.vendaId, id))
       .orderBy(asc(vendasItens.createdAt)),
     tx.select().from(empresas).limit(1),

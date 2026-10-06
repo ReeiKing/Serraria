@@ -24,7 +24,8 @@ export const TIPOS_RELATORIO = [
   { valor: "pagamentos", rotulo: "Pagamentos a fornecedores", filtros: ["fornecedor"] },
   { valor: "producao", rotulo: "Produção", filtros: ["especie"] },
   { valor: "vendas", rotulo: "Vendas", filtros: ["especie", "cliente", "motorista"] },
-  { valor: "estoque", rotulo: "Estoque atual", filtros: ["especie"] },
+  { valor: "estoque", rotulo: "Estoque de madeira", filtros: ["especie"] },
+  { valor: "produtos", rotulo: "Paletes e caixotes", filtros: [] },
 ] as const
 
 export type TipoRelatorio = (typeof TIPOS_RELATORIO)[number]["valor"]
@@ -51,6 +52,38 @@ export async function gerarRelatorio(
   const sub = `${rotulo}: ${de.split("-").reverse().join("/")} a ${ate.split("-").reverse().join("/")}`
 
   switch (tipo) {
+    case "produtos": {
+      const linhas = await tx.execute<Linha>(sql`
+        select p.nome as produto,
+               case p.categoria when 'palete' then 'Palete' when 'caixote' then 'Caixote' else 'Outro' end as categoria,
+               coalesce(p.dimensoes, '') as dimensoes, p.saldo_unidades as estoque, p.preco_venda::float8 as preco,
+               (greatest(p.saldo_unidades, 0) * p.preco_venda)::float8 as valor,
+               (select coalesce(sum(m.quantidade), 0) from public.produtos_mov m
+                 where m.produto_id = p.id and m.tipo = 'producao'
+                   and ${diaSP("m.created_at")} between ${de}::date and ${ate}::date)::int as montados,
+               (select coalesce(-sum(m.quantidade), 0) from public.produtos_mov m
+                 where m.produto_id = p.id and m.tipo in ('venda', 'estorno_venda')
+                   and ${diaSP("m.created_at")} between ${de}::date and ${ate}::date)::int as vendidos
+          from public.produtos p
+         where p.ativo
+         order by p.categoria, p.nome`)
+      return {
+        titulo: "Paletes e caixotes",
+        subtitulo: `Estoque atual · montados e vendidos em ${sub.toLowerCase()}`,
+        usaPeriodo: true,
+        linhas,
+        colunas: [
+          { chave: "produto", rotulo: "Produto", tipo: "texto" },
+          { chave: "categoria", rotulo: "Categoria", tipo: "texto" },
+          { chave: "dimensoes", rotulo: "Dimensões", tipo: "texto" },
+          { chave: "montados", rotulo: "Montados", tipo: "inteiro", total: true },
+          { chave: "vendidos", rotulo: "Vendidos", tipo: "inteiro", total: true },
+          { chave: "estoque", rotulo: "Em estoque", tipo: "inteiro", total: true },
+          { chave: "preco", rotulo: "R$/un.", tipo: "moeda" },
+          { chave: "valor", rotulo: "Valor estimado", tipo: "moeda", total: true },
+        ],
+      }
+    }
     case "compras": {
       const linhas = await tx.execute<Linha>(sql`
         select e.numero, e.created_at as data, f.nome as fornecedor, es.nome as especie,
@@ -147,7 +180,8 @@ export async function gerarRelatorio(
         select v.numero, v.confirmada_em as data, c.razao_social as cliente,
                concat_ws('/', v.destino_municipio, v.destino_uf) as destino, coalesce(m.nome, '') as motorista,
                coalesce(v.placa, '') as placa, coalesce(r.numero::text, '') as romaneio,
-               sum(vi.quantidade)::int as pecas, sum(vi.volume_m3)::float8 as m3,
+               (sum(vi.quantidade) filter (where vi.unidade = 'M3'))::int as pecas,
+               (sum(vi.quantidade) filter (where vi.unidade = 'UN'))::int as unidades, sum(vi.volume_m3)::float8 as m3,
                sum(vi.valor_total)::float8 as produtos,
                case when ${f.especieId && UUID.test(f.especieId) ? sql`true` : sql`false`} then 0 else v.valor_frete::float8 end as frete,
                case when ${f.especieId && UUID.test(f.especieId) ? sql`true` : sql`false`} then sum(vi.valor_total)::float8 else v.valor_total::float8 end as total,
@@ -155,7 +189,7 @@ export async function gerarRelatorio(
           from public.vendas v
           join public.clientes c on c.id = v.cliente_id
           join public.vendas_itens vi on vi.venda_id = v.id
-          join public.estoque_itens ei on ei.id = vi.estoque_item_id
+          left join public.estoque_itens ei on ei.id = vi.estoque_item_id
           left join public.motoristas m on m.id = v.motorista_id
           left join public.romaneios r on r.venda_id = v.id
          where v.status in ('confirmada','nfe_emitida','entregue')
@@ -177,6 +211,7 @@ export async function gerarRelatorio(
           { chave: "romaneio", rotulo: "Romaneio", tipo: "texto" },
           { chave: "pecas", rotulo: "Peças", tipo: "inteiro", total: true },
           { chave: "m3", rotulo: "m³", tipo: "m3", total: true },
+          { chave: "unidades", rotulo: "Unid.", tipo: "inteiro", total: true },
           { chave: "produtos", rotulo: "Produtos", tipo: "moeda", total: true },
           { chave: "frete", rotulo: "Frete", tipo: "moeda", total: true },
           { chave: "total", rotulo: "Total", tipo: "moeda", total: true },

@@ -54,3 +54,31 @@ export const estornoSchema = z.object({
   motivo: z.string().trim().min(5, "Explique o motivo do estorno"),
   permitirNegativo: z.boolean(),
 })
+
+// ---------------------------------------------------------------- produtos por unidade
+export const producaoProdutosSchema = z.object({
+  dataProducao: zData,
+  observacoes: zTextoOpcional,
+  itens: z
+    .array(
+      z.object({
+        produtoId: zUuid("o produto"),
+        quantidade: zInteiro({ min: 1, max: 1_000_000, rotulo: "Quantidade" }),
+      })
+    )
+    .min(1, "Lance pelo menos um produto"),
+})
+
+export const ajusteProdutoSchema = z
+  .object({
+    produtoId: zUuid("o produto"),
+    sentido: z.enum(["entrada", "saida"]),
+    quantidade: zInteiro({ min: 1, rotulo: "Quantidade" }),
+    motivo: z.enum(["inventario", "perda", "quebra", "outro"]),
+    observacao: zTextoOpcional,
+    permitirNegativo: z.boolean(),
+  })
+  .refine((a) => a.motivo !== "outro" || !!a.observacao, {
+    path: ["observacao"],
+    message: "Descreva o motivo",
+  })

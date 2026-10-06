@@ -2,7 +2,8 @@ import "server-only"
 
 import { asc, eq } from "drizzle-orm"
 
-import { clientes, vendas, vendasItens, type Tx } from "@/db"
+import { clientes, produtos, vendas, vendasItens, type Tx } from "@/db"
+import { opcaoMadeira, type OpcaoItemVenda } from "@/lib/itens-venda"
 import { listarEstoque } from "@/lib/consultas/estoque"
 import { opcoesCadastros } from "@/lib/consultas/opcoes"
 import { formatDocumento, numeroParaCampo } from "@/lib/format"
@@ -10,10 +11,11 @@ import { formatDocumento, numeroParaCampo } from "@/lib/format"
 import type { OpcaoCliente, ValoresVenda } from "./formulario"
 
 export async function dadosFormularioVenda(tx: Tx) {
-  const [opcoes, estoque, listaClientes] = await Promise.all([
+  const [opcoes, estoque, listaClientes, listaProdutos] = await Promise.all([
     opcoesCadastros(tx),
     listarEstoque(tx),
     tx.select().from(clientes).where(eq(clientes.ativo, true)).orderBy(asc(clientes.razaoSocial)),
+    tx.select().from(produtos).where(eq(produtos.ativo, true)).orderBy(asc(produtos.nome)),
   ])
   const clientesOpcoes: OpcaoCliente[] = listaClientes.map((c) => ({
     valor: c.id,
@@ -41,16 +43,17 @@ export async function dadosFormularioVenda(tx: Tx) {
       tipo: v.tipo,
       motoristaPadraoId: v.motoristaPadraoId,
     })),
-    itensEstoque: estoque.map((i) => ({
-      id: i.id,
-      especie: i.especie,
-      qualidade: i.qualidade,
-      espessuraCm: i.espessuraCm,
-      larguraCm: i.larguraCm,
-      comprimentoM: i.comprimentoM,
-      saldoPecas: i.saldoPecas,
-      precoM3: i.precoM3,
-    })),
+    itensVenda: [
+      ...estoque.map(opcaoMadeira),
+      ...listaProdutos.map((p): OpcaoItemVenda => ({
+        tipo: "UN",
+        id: p.id,
+        rotulo: p.dimensoes ? `${p.nome} · ${p.dimensoes}` : p.nome,
+        busca: `${p.nome} ${p.categoria} ${p.dimensoes ?? ""}`,
+        saldo: p.saldoUnidades,
+        preco: p.precoVenda,
+      })),
+    ],
   }
 }
 
@@ -72,7 +75,7 @@ export const VENDA_VAZIA: ValoresVenda = {
   desconto: "",
   documentoFlorestal: "",
   observacoes: "",
-  itens: [{ estoqueItemId: "", quantidade: "", precoM3: "" }],
+  itens: [{ tipo: "M3", itemId: "", quantidade: "", preco: "" }],
 }
 
 export async function valoresVendaExistente(
@@ -107,9 +110,10 @@ export async function valoresVendaExistente(
       documentoFlorestal: v.documentoFlorestal ?? "",
       observacoes: v.observacoes ?? "",
       itens: itens.map((i) => ({
-        estoqueItemId: i.estoqueItemId,
+        tipo: i.unidade === "UN" ? ("UN" as const) : ("M3" as const),
+        itemId: (i.unidade === "UN" ? i.produtoId : i.estoqueItemId) ?? "",
         quantidade: String(i.quantidade),
-        precoM3: numeroParaCampo(i.precoM3),
+        preco: numeroParaCampo(i.unidade === "UN" ? i.precoUnitario : i.precoM3),
       })),
     },
   }

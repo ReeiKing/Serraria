@@ -3,14 +3,19 @@
 import { relations } from "drizzle-orm/relations"
 import {
   usersInAuth,
-  producoes,
+  produtos,
   especies,
-  usuarios,
-  empresas,
-  fornecedores,
+  producoesProdutos,
+  producoesProdutosItens,
+  produtosMov,
+  vendas,
   clientes,
   motoristas,
   veiculos,
+  producoes,
+  usuarios,
+  empresas,
+  fornecedores,
   qualidades,
   tabelaPrecos,
   entradasToras,
@@ -19,38 +24,67 @@ import {
   estoqueTorasMov,
   estoqueItens,
   estoqueMov,
-  vendas,
   producoesItens,
-  vendasItens,
   romaneios,
   notasFiscais,
   nfeEventos,
   nfeLogs,
   orcamentosSite,
   auditoria,
+  vendasItens,
 } from "./schema"
 
-export const producoesRelations = relations(producoes, ({ one, many }) => ({
+export const produtosRelations = relations(produtos, ({ one, many }) => ({
   usersInAuth_createdBy: one(usersInAuth, {
-    fields: [producoes.createdBy],
+    fields: [produtos.createdBy],
     references: [usersInAuth.id],
-    relationName: "producoes_createdBy_usersInAuth_id",
+    relationName: "produtos_createdBy_usersInAuth_id",
   }),
   especy: one(especies, {
-    fields: [producoes.especieId],
+    fields: [produtos.especieId],
     references: [especies.id],
   }),
   usersInAuth_updatedBy: one(usersInAuth, {
-    fields: [producoes.updatedBy],
+    fields: [produtos.updatedBy],
     references: [usersInAuth.id],
-    relationName: "producoes_updatedBy_usersInAuth_id",
+    relationName: "produtos_updatedBy_usersInAuth_id",
   }),
-  estoqueTorasMovs: many(estoqueTorasMov),
-  estoqueMovs: many(estoqueMov),
-  producoesItens: many(producoesItens),
+  producoesProdutosItens: many(producoesProdutosItens),
+  produtosMovs: many(produtosMov),
+  vendasItens: many(vendasItens),
 }))
 
 export const usersInAuthRelations = relations(usersInAuth, ({ many }) => ({
+  produtos_createdBy: many(produtos, {
+    relationName: "produtos_createdBy_usersInAuth_id",
+  }),
+  produtos_updatedBy: many(produtos, {
+    relationName: "produtos_updatedBy_usersInAuth_id",
+  }),
+  producoesProdutos_createdBy: many(producoesProdutos, {
+    relationName: "producoesProdutos_createdBy_usersInAuth_id",
+  }),
+  producoesProdutos_updatedBy: many(producoesProdutos, {
+    relationName: "producoesProdutos_updatedBy_usersInAuth_id",
+  }),
+  producoesProdutosItens_createdBy: many(producoesProdutosItens, {
+    relationName: "producoesProdutosItens_createdBy_usersInAuth_id",
+  }),
+  producoesProdutosItens_updatedBy: many(producoesProdutosItens, {
+    relationName: "producoesProdutosItens_updatedBy_usersInAuth_id",
+  }),
+  produtosMovs_createdBy: many(produtosMov, {
+    relationName: "produtosMov_createdBy_usersInAuth_id",
+  }),
+  produtosMovs_updatedBy: many(produtosMov, {
+    relationName: "produtosMov_updatedBy_usersInAuth_id",
+  }),
+  vendas_createdBy: many(vendas, {
+    relationName: "vendas_createdBy_usersInAuth_id",
+  }),
+  vendas_updatedBy: many(vendas, {
+    relationName: "vendas_updatedBy_usersInAuth_id",
+  }),
   producoes_createdBy: many(producoes, {
     relationName: "producoes_createdBy_usersInAuth_id",
   }),
@@ -150,12 +184,6 @@ export const usersInAuthRelations = relations(usersInAuth, ({ many }) => ({
   producoesItens_updatedBy: many(producoesItens, {
     relationName: "producoesItens_updatedBy_usersInAuth_id",
   }),
-  vendasItens_createdBy: many(vendasItens, {
-    relationName: "vendasItens_createdBy_usersInAuth_id",
-  }),
-  vendasItens_updatedBy: many(vendasItens, {
-    relationName: "vendasItens_updatedBy_usersInAuth_id",
-  }),
   romaneios_createdBy: many(romaneios, {
     relationName: "romaneios_createdBy_usersInAuth_id",
   }),
@@ -187,21 +215,22 @@ export const usersInAuthRelations = relations(usersInAuth, ({ many }) => ({
     relationName: "orcamentosSite_updatedBy_usersInAuth_id",
   }),
   auditorias: many(auditoria),
-  vendas_createdBy: many(vendas, {
-    relationName: "vendas_createdBy_usersInAuth_id",
-  }),
-  vendas_updatedBy: many(vendas, {
-    relationName: "vendas_updatedBy_usersInAuth_id",
-  }),
   especies_createdBy: many(especies, {
     relationName: "especies_createdBy_usersInAuth_id",
   }),
   especies_updatedBy: many(especies, {
     relationName: "especies_updatedBy_usersInAuth_id",
   }),
+  vendasItens_createdBy: many(vendasItens, {
+    relationName: "vendasItens_createdBy_usersInAuth_id",
+  }),
+  vendasItens_updatedBy: many(vendasItens, {
+    relationName: "vendasItens_updatedBy_usersInAuth_id",
+  }),
 }))
 
 export const especiesRelations = relations(especies, ({ one, many }) => ({
+  produtos: many(produtos),
   producoes: many(producoes),
   tabelaPrecos: many(tabelaPrecos),
   entradasToras: many(entradasToras),
@@ -217,6 +246,166 @@ export const especiesRelations = relations(especies, ({ one, many }) => ({
     references: [usersInAuth.id],
     relationName: "especies_updatedBy_usersInAuth_id",
   }),
+}))
+
+export const producoesProdutosRelations = relations(producoesProdutos, ({ one, many }) => ({
+  usersInAuth_createdBy: one(usersInAuth, {
+    fields: [producoesProdutos.createdBy],
+    references: [usersInAuth.id],
+    relationName: "producoesProdutos_createdBy_usersInAuth_id",
+  }),
+  usersInAuth_updatedBy: one(usersInAuth, {
+    fields: [producoesProdutos.updatedBy],
+    references: [usersInAuth.id],
+    relationName: "producoesProdutos_updatedBy_usersInAuth_id",
+  }),
+  producoesProdutosItens: many(producoesProdutosItens),
+  produtosMovs: many(produtosMov),
+}))
+
+export const producoesProdutosItensRelations = relations(producoesProdutosItens, ({ one }) => ({
+  usersInAuth_createdBy: one(usersInAuth, {
+    fields: [producoesProdutosItens.createdBy],
+    references: [usersInAuth.id],
+    relationName: "producoesProdutosItens_createdBy_usersInAuth_id",
+  }),
+  producoesProduto: one(producoesProdutos, {
+    fields: [producoesProdutosItens.producaoId],
+    references: [producoesProdutos.id],
+  }),
+  produto: one(produtos, {
+    fields: [producoesProdutosItens.produtoId],
+    references: [produtos.id],
+  }),
+  usersInAuth_updatedBy: one(usersInAuth, {
+    fields: [producoesProdutosItens.updatedBy],
+    references: [usersInAuth.id],
+    relationName: "producoesProdutosItens_updatedBy_usersInAuth_id",
+  }),
+}))
+
+export const produtosMovRelations = relations(produtosMov, ({ one }) => ({
+  usersInAuth_createdBy: one(usersInAuth, {
+    fields: [produtosMov.createdBy],
+    references: [usersInAuth.id],
+    relationName: "produtosMov_createdBy_usersInAuth_id",
+  }),
+  producoesProduto: one(producoesProdutos, {
+    fields: [produtosMov.producaoId],
+    references: [producoesProdutos.id],
+  }),
+  produto: one(produtos, {
+    fields: [produtosMov.produtoId],
+    references: [produtos.id],
+  }),
+  usersInAuth_updatedBy: one(usersInAuth, {
+    fields: [produtosMov.updatedBy],
+    references: [usersInAuth.id],
+    relationName: "produtosMov_updatedBy_usersInAuth_id",
+  }),
+  venda: one(vendas, {
+    fields: [produtosMov.vendaId],
+    references: [vendas.id],
+  }),
+}))
+
+export const vendasRelations = relations(vendas, ({ one, many }) => ({
+  produtosMovs: many(produtosMov),
+  cliente: one(clientes, {
+    fields: [vendas.clienteId],
+    references: [clientes.id],
+  }),
+  usersInAuth_createdBy: one(usersInAuth, {
+    fields: [vendas.createdBy],
+    references: [usersInAuth.id],
+    relationName: "vendas_createdBy_usersInAuth_id",
+  }),
+  motorista: one(motoristas, {
+    fields: [vendas.motoristaId],
+    references: [motoristas.id],
+  }),
+  usersInAuth_updatedBy: one(usersInAuth, {
+    fields: [vendas.updatedBy],
+    references: [usersInAuth.id],
+    relationName: "vendas_updatedBy_usersInAuth_id",
+  }),
+  veiculo: one(veiculos, {
+    fields: [vendas.veiculoId],
+    references: [veiculos.id],
+  }),
+  estoqueMovs: many(estoqueMov),
+  romaneios: many(romaneios),
+  notasFiscais: many(notasFiscais),
+  vendasItens: many(vendasItens),
+}))
+
+export const clientesRelations = relations(clientes, ({ one, many }) => ({
+  vendas: many(vendas),
+  usersInAuth_createdBy: one(usersInAuth, {
+    fields: [clientes.createdBy],
+    references: [usersInAuth.id],
+    relationName: "clientes_createdBy_usersInAuth_id",
+  }),
+  usersInAuth_updatedBy: one(usersInAuth, {
+    fields: [clientes.updatedBy],
+    references: [usersInAuth.id],
+    relationName: "clientes_updatedBy_usersInAuth_id",
+  }),
+}))
+
+export const motoristasRelations = relations(motoristas, ({ one, many }) => ({
+  vendas: many(vendas),
+  usersInAuth_createdBy: one(usersInAuth, {
+    fields: [motoristas.createdBy],
+    references: [usersInAuth.id],
+    relationName: "motoristas_createdBy_usersInAuth_id",
+  }),
+  usersInAuth_updatedBy: one(usersInAuth, {
+    fields: [motoristas.updatedBy],
+    references: [usersInAuth.id],
+    relationName: "motoristas_updatedBy_usersInAuth_id",
+  }),
+  veiculos: many(veiculos),
+  entradasToras: many(entradasToras),
+}))
+
+export const veiculosRelations = relations(veiculos, ({ one, many }) => ({
+  vendas: many(vendas),
+  usersInAuth_createdBy: one(usersInAuth, {
+    fields: [veiculos.createdBy],
+    references: [usersInAuth.id],
+    relationName: "veiculos_createdBy_usersInAuth_id",
+  }),
+  motorista: one(motoristas, {
+    fields: [veiculos.motoristaPadraoId],
+    references: [motoristas.id],
+  }),
+  usersInAuth_updatedBy: one(usersInAuth, {
+    fields: [veiculos.updatedBy],
+    references: [usersInAuth.id],
+    relationName: "veiculos_updatedBy_usersInAuth_id",
+  }),
+  entradasToras: many(entradasToras),
+}))
+
+export const producoesRelations = relations(producoes, ({ one, many }) => ({
+  usersInAuth_createdBy: one(usersInAuth, {
+    fields: [producoes.createdBy],
+    references: [usersInAuth.id],
+    relationName: "producoes_createdBy_usersInAuth_id",
+  }),
+  especy: one(especies, {
+    fields: [producoes.especieId],
+    references: [especies.id],
+  }),
+  usersInAuth_updatedBy: one(usersInAuth, {
+    fields: [producoes.updatedBy],
+    references: [usersInAuth.id],
+    relationName: "producoes_updatedBy_usersInAuth_id",
+  }),
+  estoqueTorasMovs: many(estoqueTorasMov),
+  estoqueMovs: many(estoqueMov),
+  producoesItens: many(producoesItens),
 }))
 
 export const usuariosRelations = relations(usuarios, ({ one }) => ({
@@ -262,55 +451,6 @@ export const fornecedoresRelations = relations(fornecedores, ({ one, many }) => 
     relationName: "fornecedores_updatedBy_usersInAuth_id",
   }),
   entradasToras: many(entradasToras),
-}))
-
-export const clientesRelations = relations(clientes, ({ one, many }) => ({
-  usersInAuth_createdBy: one(usersInAuth, {
-    fields: [clientes.createdBy],
-    references: [usersInAuth.id],
-    relationName: "clientes_createdBy_usersInAuth_id",
-  }),
-  usersInAuth_updatedBy: one(usersInAuth, {
-    fields: [clientes.updatedBy],
-    references: [usersInAuth.id],
-    relationName: "clientes_updatedBy_usersInAuth_id",
-  }),
-  vendas: many(vendas),
-}))
-
-export const motoristasRelations = relations(motoristas, ({ one, many }) => ({
-  usersInAuth_createdBy: one(usersInAuth, {
-    fields: [motoristas.createdBy],
-    references: [usersInAuth.id],
-    relationName: "motoristas_createdBy_usersInAuth_id",
-  }),
-  usersInAuth_updatedBy: one(usersInAuth, {
-    fields: [motoristas.updatedBy],
-    references: [usersInAuth.id],
-    relationName: "motoristas_updatedBy_usersInAuth_id",
-  }),
-  veiculos: many(veiculos),
-  entradasToras: many(entradasToras),
-  vendas: many(vendas),
-}))
-
-export const veiculosRelations = relations(veiculos, ({ one, many }) => ({
-  usersInAuth_createdBy: one(usersInAuth, {
-    fields: [veiculos.createdBy],
-    references: [usersInAuth.id],
-    relationName: "veiculos_createdBy_usersInAuth_id",
-  }),
-  motorista: one(motoristas, {
-    fields: [veiculos.motoristaPadraoId],
-    references: [motoristas.id],
-  }),
-  usersInAuth_updatedBy: one(usersInAuth, {
-    fields: [veiculos.updatedBy],
-    references: [usersInAuth.id],
-    relationName: "veiculos_updatedBy_usersInAuth_id",
-  }),
-  entradasToras: many(entradasToras),
-  vendas: many(vendas),
 }))
 
 export const qualidadesRelations = relations(qualidades, ({ one, many }) => ({
@@ -489,35 +629,6 @@ export const estoqueMovRelations = relations(estoqueMov, ({ one }) => ({
   }),
 }))
 
-export const vendasRelations = relations(vendas, ({ one, many }) => ({
-  estoqueMovs: many(estoqueMov),
-  vendasItens: many(vendasItens),
-  romaneios: many(romaneios),
-  notasFiscais: many(notasFiscais),
-  cliente: one(clientes, {
-    fields: [vendas.clienteId],
-    references: [clientes.id],
-  }),
-  usersInAuth_createdBy: one(usersInAuth, {
-    fields: [vendas.createdBy],
-    references: [usersInAuth.id],
-    relationName: "vendas_createdBy_usersInAuth_id",
-  }),
-  motorista: one(motoristas, {
-    fields: [vendas.motoristaId],
-    references: [motoristas.id],
-  }),
-  usersInAuth_updatedBy: one(usersInAuth, {
-    fields: [vendas.updatedBy],
-    references: [usersInAuth.id],
-    relationName: "vendas_updatedBy_usersInAuth_id",
-  }),
-  veiculo: one(veiculos, {
-    fields: [vendas.veiculoId],
-    references: [veiculos.id],
-  }),
-}))
-
 export const producoesItensRelations = relations(producoesItens, ({ one }) => ({
   usersInAuth_createdBy: one(usersInAuth, {
     fields: [producoesItens.createdBy],
@@ -536,27 +647,6 @@ export const producoesItensRelations = relations(producoesItens, ({ one }) => ({
     fields: [producoesItens.updatedBy],
     references: [usersInAuth.id],
     relationName: "producoesItens_updatedBy_usersInAuth_id",
-  }),
-}))
-
-export const vendasItensRelations = relations(vendasItens, ({ one }) => ({
-  usersInAuth_createdBy: one(usersInAuth, {
-    fields: [vendasItens.createdBy],
-    references: [usersInAuth.id],
-    relationName: "vendasItens_createdBy_usersInAuth_id",
-  }),
-  estoqueIten: one(estoqueItens, {
-    fields: [vendasItens.estoqueItemId],
-    references: [estoqueItens.id],
-  }),
-  usersInAuth_updatedBy: one(usersInAuth, {
-    fields: [vendasItens.updatedBy],
-    references: [usersInAuth.id],
-    relationName: "vendasItens_updatedBy_usersInAuth_id",
-  }),
-  venda: one(vendas, {
-    fields: [vendasItens.vendaId],
-    references: [vendas.id],
   }),
 }))
 
@@ -652,5 +742,30 @@ export const auditoriaRelations = relations(auditoria, ({ one }) => ({
   usersInAuth: one(usersInAuth, {
     fields: [auditoria.usuarioId],
     references: [usersInAuth.id],
+  }),
+}))
+
+export const vendasItensRelations = relations(vendasItens, ({ one }) => ({
+  usersInAuth_createdBy: one(usersInAuth, {
+    fields: [vendasItens.createdBy],
+    references: [usersInAuth.id],
+    relationName: "vendasItens_createdBy_usersInAuth_id",
+  }),
+  estoqueIten: one(estoqueItens, {
+    fields: [vendasItens.estoqueItemId],
+    references: [estoqueItens.id],
+  }),
+  produto: one(produtos, {
+    fields: [vendasItens.produtoId],
+    references: [produtos.id],
+  }),
+  usersInAuth_updatedBy: one(usersInAuth, {
+    fields: [vendasItens.updatedBy],
+    references: [usersInAuth.id],
+    relationName: "vendasItens_updatedBy_usersInAuth_id",
+  }),
+  venda: one(vendas, {
+    fields: [vendasItens.vendaId],
+    references: [vendas.id],
   }),
 }))

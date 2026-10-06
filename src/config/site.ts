@@ -68,6 +68,30 @@ export const siteConfig = {
     },
   ],
 
+  // Produtos vendidos por unidade (aparecem em "Também fabricamos")
+  outrosProdutos: [
+    {
+      nome: "Palete PBR",
+      medida: "1,00 × 1,20 m",
+      descricao:
+        "Padrão PBR, 4 entradas, para carga pesada e paletização em armazéns e indústrias.",
+      icone: "palete",
+    },
+    {
+      nome: "Palete descartável",
+      medida: "Sob medida",
+      descricao: "Leve e econômico, para exportação e envio de mercadorias sem retorno do palete.",
+      icone: "palete",
+    },
+    {
+      nome: "Caixote de feira",
+      medida: "Padrão hortifrúti",
+      descricao:
+        "Caixote de madeira para frutas, legumes e verduras. Vendido por unidade ou em lotes.",
+      icone: "caixote",
+    },
+  ],
+
   qualidades: [
     { nome: "1ª linha", descricao: "Peças limpas, sem nós soltos, para acabamento aparente." },
     { nome: "2ª linha", descricao: "Poucos nós firmes. Ótimo custo-benefício para estrutura." },

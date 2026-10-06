@@ -9,18 +9,19 @@ Por enquanto o projeto roda **só na máquina local**, com o Supabase local em D
 
 ## O que o sistema faz
 
-| Módulo             | Resumo                                                                                                                                                                                                                                                                      |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Painel             | Faturamento, m³ vendido e produzido, rendimento médio, toras compradas, pagamentos, contas a pagar e ticket médio por período; gráficos de compras × vendas, vendas por espécie e qualidade e estoque atual; avisos de estoque baixo, cargas a entregar e orçamentos novos. |
-| Entrada de toras   | Compra por m³ (diâmetro e comprimento de cada tora, com quantidade por diâmetro), metro estéreo (C × L × A da carga) ou tonelada (bruto menos a tara do veículo). Preço sugerido pela tabela, pagamentos parciais ao fornecedor e baixa automática no estoque de toras.     |
-| Produção           | Peças por linha (espessura × largura × comprimento, qualidade, quantidade), volume em tempo real, rendimento (m³ serrado ÷ m³ de tora) e estorno com movimentos inversos.                                                                                                   |
-| Estoque            | Saldo por espécie + bitola + qualidade, valor estimado pelo preço vigente, busca por medida ("1,8 x 9"), estoque mínimo com alerta, ajuste manual com motivo e kardex por item.                                                                                             |
-| Vendas e romaneio  | Cliente e destino da carga, itens escolhidos do estoque, frete CIF/FOB, desconto; rascunho → confirmada (baixa o estoque e gera o romaneio numerado) → entregue, com cancelamento que devolve as peças. Romaneio em PDF para imprimir ou baixar.                            |
-| Orçamentos do site | Caixa de entrada dos pedidos feitos na landing, com status e resposta pelo WhatsApp.                                                                                                                                                                                        |
-| Cadastros          | Clientes (preenchimento pelo CNPJ e CEP via BrasilAPI), fornecedores, motoristas, veículos, espécies e qualidades, tabela de preços com histórico, dados da empresa e padrões fiscais, usuários.                                                                            |
-| Relatórios         | Compras, pagamentos, produção, vendas e estoque, com filtros e exportação para Excel e PDF.                                                                                                                                                                                 |
-| Auditoria          | Quem criou, alterou ou excluiu cada registro e quando, com os valores antes e depois.                                                                                                                                                                                       |
-| Landing page       | Hero com cena 3D (tora sendo serrada), produtos, diferenciais, linha do tempo, depoimentos, FAQ, formulário de orçamento e WhatsApp. Textos em `src/config/site.ts`.                                                                                                        |
+| Módulo             | Resumo                                                                                                                                                                                                                                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Painel             | Faturamento, m³ vendido e produzido, rendimento médio, toras compradas, pagamentos, contas a pagar e ticket médio por período; gráficos de compras × vendas, vendas por espécie e qualidade e estoque atual; avisos de estoque baixo, cargas a entregar e orçamentos novos.                             |
+| Entrada de toras   | Compra por m³ (diâmetro e comprimento de cada tora, com quantidade por diâmetro), metro estéreo (C × L × A da carga) ou tonelada (bruto menos a tara do veículo). Preço sugerido pela tabela, pagamentos parciais ao fornecedor e baixa automática no estoque de toras.                                 |
+| Produção           | Peças por linha (espessura × largura × comprimento, qualidade, quantidade), volume em tempo real, rendimento (m³ serrado ÷ m³ de tora) e estorno com movimentos inversos.                                                                                                                               |
+| Paletes e caixotes | Produtos vendidos por unidade (palete PBR, palete descartável, caixote de feira e outros): cadastro próprio, montagem em unidades com estorno, estoque com mínimo, ajuste e kardex, e venda junto com a madeira serrada.                                                                                |
+| Estoque            | Saldo por espécie + bitola + qualidade, valor estimado pelo preço vigente, busca por medida ("1,8 x 9"), estoque mínimo com alerta, ajuste manual com motivo e kardex por item.                                                                                                                         |
+| Vendas e romaneio  | Cliente e destino da carga, itens escolhidos do estoque (madeira por m³ e produtos por unidade na mesma venda), frete CIF/FOB, desconto; rascunho → confirmada (baixa o estoque e gera o romaneio numerado) → entregue, com cancelamento que devolve as peças. Romaneio em PDF para imprimir ou baixar. |
+| Orçamentos do site | Caixa de entrada dos pedidos feitos na landing, com status e resposta pelo WhatsApp.                                                                                                                                                                                                                    |
+| Cadastros          | Clientes (preenchimento pelo CNPJ e CEP via BrasilAPI), fornecedores, motoristas, veículos, espécies e qualidades, tabela de preços com histórico, dados da empresa e padrões fiscais, usuários.                                                                                                        |
+| Relatórios         | Compras, pagamentos, produção, vendas e estoque, com filtros e exportação para Excel e PDF.                                                                                                                                                                                                             |
+| Auditoria          | Quem criou, alterou ou excluiu cada registro e quando, com os valores antes e depois.                                                                                                                                                                                                                   |
+| Landing page       | Hero com cena 3D (tora sendo serrada), produtos, diferenciais, linha do tempo, depoimentos, FAQ, formulário de orçamento e WhatsApp. Textos em `src/config/site.ts`.                                                                                                                                    |
 
 Todo usuário logado e ativo tem acesso completo (a operação é feita por uma secretária); não há
 perfis com permissões diferentes.
@@ -38,6 +39,19 @@ perfis com permissões diferentes.
 | Tabelas, gráficos e documentos | TanStack Table 9, Recharts, @react-pdf/renderer, ExcelJS                                                            |
 | Datas e números                | date-fns com @date-fns/tz (America/Sao_Paulo) e decimal.js                                                          |
 | Testes                         | Vitest, pgTAP (`supabase test db`) e Playwright                                                                     |
+
+## Para apresentar
+
+O modo de desenvolvimento (`npm run dev`) compila cada página na primeira visita e recompila a
+cada alteração de código, por isso é mais lento. Para apresentar, use o modo de produção:
+
+```bash
+npm run db:start        # se o banco não estiver ligado
+npm run db:reset        # opcional: volta aos dados de simulação
+npm run apresentacao    # gera o build e abre em http://localhost:3000
+```
+
+Feche o `npm run dev` antes, porque os dois usam a porta 3000.
 
 ## Como rodar
 
@@ -69,10 +83,11 @@ O cadastro público está desligado: novos usuários são criados em **Cadastros
 
 ## Dados de simulação
 
-O banco local já sobe preenchido como se o sistema estivesse em uso desde julho: 8 clientes,
+O banco local já sobe preenchido como se o sistema estivesse em uso desde julho: 9 clientes,
 5 fornecedores, 4 motoristas e 4 veículos, 18 entradas de toras nos três modos de medição,
-22 produções, 28 vendas em todos os status, 26 romaneios, 14 orçamentos do site, histórico de
-preços e a auditoria de tudo isso.
+22 produções de madeira, 18 montagens de paletes e caixotes, 44 vendas em todos os status (28 de
+madeira e 16 de produtos), os romaneios, 14 orçamentos do site, histórico de preços e a auditoria
+de tudo isso.
 
 As datas são gravadas como `now() - intervalo`, então a última movimentação fica sempre a poucas
 horas do momento em que o banco foi recriado e o painel de "Este mês" nunca fica vazio numa
@@ -183,7 +198,7 @@ serraria.
 
 ## Qualidade verificada
 
-- Testes: 68 unitários, 19 de banco (pgTAP) e 5 de ponta a ponta.
+- Testes: 69 unitários, 24 de banco (pgTAP) e 6 de ponta a ponta.
 - Acessibilidade: nenhuma violação WCAG A/AA (axe) em 11 telas do sistema; login com 100 no
   Lighthouse.
 - Landing no Lighthouse (celular): desempenho 84, boas práticas 100, SEO 100. A cena 3D só é

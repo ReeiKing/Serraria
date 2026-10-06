@@ -20,7 +20,8 @@
     "db:reset": "supabase db reset",
     "db:test": "supabase test db",
     "db:pull": "drizzle-kit pull && node scripts/pos-db-pull.mjs && prettier --write src/db/gerado",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "apresentacao": "NEXT_DIST_DIR=.next-build next build && NEXT_DIST_DIR=.next-build next start -p 3000"
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",

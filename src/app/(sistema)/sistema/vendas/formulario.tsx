@@ -21,7 +21,8 @@ import { CamposEndereco } from "@/components/form/campos-endereco"
 import { EscolhaCartoes, Secao } from "@/components/sistema/escolha-cartoes"
 import {
   SeletorItemEstoque,
-  type OpcaoItemEstoque,
+  chaveItem,
+  type OpcaoItemVenda,
 } from "@/components/sistema/seletor-item-estoque"
 import { Button } from "@/components/ui/button"
 import { FieldError } from "@/components/ui/field"
@@ -52,42 +53,51 @@ export type OpcaoCliente = {
 
 type OpcaoVeiculo = { id: string; rotulo: string; tipo: string; motoristaPadraoId: string | null }
 
-const ITEM_VAZIO = { estoqueItemId: "", quantidade: "", precoM3: "" }
+const ITEM_VAZIO = { tipo: "M3" as const, itemId: "", quantidade: "", preco: "" }
 const useForm2 = () => useFormContext<ValoresVenda>()
 
-function TabelaItens({ itensEstoque }: { itensEstoque: OpcaoItemEstoque[] }) {
+/** Converte as linhas do formulário para o cálculo (medidas vêm do item escolhido). */
+function paraCalculo(
+  itens: ValoresVenda["itens"] | undefined,
+  porChave: Map<string, OpcaoItemVenda>
+) {
+  return (itens ?? []).map((i) => {
+    const e = porChave.get(chaveItem(i.tipo, i.itemId))
+    return {
+      unidade: i.tipo,
+      espessuraCm: e?.espessuraCm ?? 0,
+      larguraCm: e?.larguraCm ?? 0,
+      comprimentoM: e?.comprimentoM ?? 0,
+      quantidade: i.quantidade,
+      preco: i.preco,
+    }
+  })
+}
+
+function TabelaItens({ itensVenda }: { itensVenda: OpcaoItemVenda[] }) {
   const form = useForm2()
   const { fields, append, remove } = useFieldArray<ValoresVenda, "itens">({ name: "itens" })
   const itens = useWatch<ValoresVenda, "itens">({ name: "itens" })
-  const porId = new Map(itensEstoque.map((i) => [i.id, i]))
-  const calc = calcularVenda(
-    (itens ?? []).map((i) => {
-      const e = porId.get(i.estoqueItemId)
-      return {
-        espessuraCm: e?.espessuraCm ?? 0,
-        larguraCm: e?.larguraCm ?? 0,
-        comprimentoM: e?.comprimentoM ?? 0,
-        quantidade: i.quantidade,
-        precoM3: i.precoM3,
-      }
-    })
-  )
+  const porChave = new Map(itensVenda.map((i) => [chaveItem(i.tipo, i.id), i]))
+  const calc = calcularVenda(paraCalculo(itens, porChave))
   const erros = form.formState.errors.itens
 
   return (
     <div className="flex flex-col gap-3">
       <div className="text-muted-foreground hidden grid-cols-[2.4fr_0.8fr_1fr_1fr_auto] gap-2 px-1 text-xs font-medium md:grid">
-        <span>Bitola do estoque</span>
-        <span>Peças</span>
-        <span>R$/m³</span>
-        <span className="text-right">m³ · valor</span>
+        <span>Item (madeira serrada ou produto)</span>
+        <span>Quantidade</span>
+        <span>Preço</span>
+        <span className="text-right">Volume · valor</span>
         <span className="w-10" />
       </div>
       <AnimatePresence initial={false}>
         {fields.map((f, i) => {
-          const sel = porId.get(itens?.[i]?.estoqueItemId ?? "")
-          const qtd = Number(itens?.[i]?.quantidade || 0)
-          const falta = sel && qtd > sel.saldoPecas
+          const linha = itens?.[i]
+          const unidade = linha?.tipo === "UN"
+          const sel = porChave.get(chaveItem(linha?.tipo ?? "M3", linha?.itemId ?? ""))
+          const qtd = Number(linha?.quantidade || 0)
+          const falta = sel && qtd > sel.saldo
           const e = erros?.[i]
           return (
             <motion.div
@@ -99,26 +109,28 @@ function TabelaItens({ itensEstoque }: { itensEstoque: OpcaoItemEstoque[] }) {
             >
               <div className="col-span-2 md:col-span-1">
                 <SeletorItemEstoque
-                  itens={itensEstoque}
-                  valor={itens?.[i]?.estoqueItemId ?? ""}
-                  invalido={!!e?.estoqueItemId}
-                  rotuloAcessivel={`Bitola da linha ${i + 1}`}
-                  aoMudar={(id) => {
-                    form.setValue(`itens.${i}.estoqueItemId`, id, { shouldValidate: true })
-                    const item = porId.get(id)
-                    if (item?.precoM3)
-                      form.setValue(`itens.${i}.precoM3`, numeroParaCampo(item.precoM3), {
+                  itens={itensVenda}
+                  valor={chaveItem(linha?.tipo ?? "M3", linha?.itemId ?? "")}
+                  invalido={!!e?.itemId}
+                  rotuloAcessivel={`Item da linha ${i + 1}`}
+                  aoMudar={(item) => {
+                    form.setValue(`itens.${i}.tipo`, item.tipo)
+                    form.setValue(`itens.${i}.itemId`, item.id, { shouldValidate: true })
+                    if (item.preco)
+                      form.setValue(`itens.${i}.preco`, numeroParaCampo(item.preco), {
                         shouldValidate: true,
                       })
                   }}
                 />
               </div>
               <div>
-                <span className="text-muted-foreground mb-1 block text-xs md:hidden">Peças</span>
+                <span className="text-muted-foreground mb-1 block text-xs md:hidden">
+                  {unidade ? "Unidades" : "Peças"}
+                </span>
                 <Input
                   inputMode="numeric"
                   placeholder="0"
-                  aria-label={`Peças da linha ${i + 1}`}
+                  aria-label={`Quantidade da linha ${i + 1}`}
                   aria-invalid={!!e?.quantidade || !!falta}
                   className="h-11 text-base tabular-nums"
                   {...form.register(`itens.${i}.quantidade`, {
@@ -126,23 +138,30 @@ function TabelaItens({ itensEstoque }: { itensEstoque: OpcaoItemEstoque[] }) {
                   })}
                 />
               </div>
-              <div>
-                <span className="text-muted-foreground mb-1 block text-xs md:hidden">R$/m³</span>
+              <div className="relative">
+                <span className="text-muted-foreground mb-1 block text-xs md:hidden">
+                  {unidade ? "R$/unidade" : "R$/m³"}
+                </span>
                 <Input
                   inputMode="decimal"
                   placeholder="0,00"
-                  aria-label={`Preço por m³ da linha ${i + 1}`}
-                  aria-invalid={!!e?.precoM3}
-                  className="h-11 text-base tabular-nums"
-                  {...form.register(`itens.${i}.precoM3`, {
+                  aria-label={`Preço ${unidade ? "por unidade" : "por m³"} da linha ${i + 1}`}
+                  aria-invalid={!!e?.preco}
+                  className="h-11 pr-12 text-base tabular-nums"
+                  {...form.register(`itens.${i}.preco`, {
                     onChange: (ev) => (ev.target.value = ev.target.value.replace(/[^\d.,]/g, "")),
                   })}
                 />
+                <span className="text-muted-foreground pointer-events-none absolute right-3 bottom-3 text-xs">
+                  {unidade ? "/un." : "/m³"}
+                </span>
               </div>
               <div className="flex h-11 flex-col justify-center text-sm tabular-nums md:items-end">
                 <span className="font-semibold">{formatMoeda(calc.linhas[i]?.valor ?? 0)}</span>
                 <span className="text-muted-foreground text-xs">
-                  {formatM3(calc.linhas[i]?.volumeM3 ?? 0)} m³
+                  {unidade
+                    ? `${qtd.toLocaleString("pt-BR")} un.`
+                    : `${formatM3(calc.linhas[i]?.volumeM3 ?? 0)} m³`}
                 </span>
               </div>
               <Button
@@ -161,10 +180,11 @@ function TabelaItens({ itensEstoque }: { itensEstoque: OpcaoItemEstoque[] }) {
                   {falta && !e ? (
                     <>
                       <TriangleAlert className="size-4" /> Só há{" "}
-                      {sel!.saldoPecas.toLocaleString("pt-BR")} peças em estoque.
+                      {sel!.saldo.toLocaleString("pt-BR")} {unidade ? "unidades" : "peças"} em
+                      estoque.
                     </>
                   ) : (
-                    (e?.estoqueItemId?.message ?? e?.quantidade?.message ?? e?.precoM3?.message)
+                    (e?.itemId?.message ?? e?.quantidade?.message ?? e?.preco?.message)
                   )}
                 </p>
               )}
@@ -192,14 +212,14 @@ export function FormularioVenda({
   clientes,
   motoristas,
   veiculos,
-  itensEstoque,
+  itensVenda,
 }: {
   id: string | null
   valoresIniciais: ValoresVenda
   clientes: OpcaoCliente[]
   motoristas: { valor: string; rotulo: string }[]
   veiculos: OpcaoVeiculo[]
-  itensEstoque: OpcaoItemEstoque[]
+  itensVenda: OpcaoItemVenda[]
 }) {
   const router = useRouter()
   const [pendente, iniciar] = useTransition()
@@ -209,23 +229,10 @@ export function FormularioVenda({
     mode: "onTouched",
   })
   const v = useWatch({ control: form.control }) as ValoresVenda
-  const porId = new Map(itensEstoque.map((i) => [i.id, i]))
+  const porChave = new Map(itensVenda.map((i) => [chaveItem(i.tipo, i.id), i]))
   const frete = v.tipoFrete === "sem_frete" ? 0 : (parseNumeroBR(v.valorFrete) ?? 0)
   const desconto = parseNumeroBR(v.desconto) ?? 0
-  const calc = calcularVenda(
-    (v.itens ?? []).map((i) => {
-      const e = porId.get(i.estoqueItemId)
-      return {
-        espessuraCm: e?.espessuraCm ?? 0,
-        larguraCm: e?.larguraCm ?? 0,
-        comprimentoM: e?.comprimentoM ?? 0,
-        quantidade: i.quantidade,
-        precoM3: i.precoM3,
-      }
-    }),
-    frete,
-    desconto
-  )
+  const calc = calcularVenda(paraCalculo(v.itens, porChave), frete, desconto)
 
   function aoEscolherCliente(clienteId: string) {
     const c = clientes.find((x) => x.valor === clienteId)
@@ -319,7 +326,7 @@ export function FormularioVenda({
           </Secao>
 
           <Secao titulo="Itens da carga">
-            <TabelaItens itensEstoque={itensEstoque} />
+            <TabelaItens itensVenda={itensVenda} />
           </Secao>
 
           <Secao titulo="Transporte e frete">

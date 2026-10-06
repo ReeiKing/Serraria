@@ -137,24 +137,37 @@ export default async function VendaPage({ params }: { params: Promise<{ id: stri
             </tr>
           </thead>
           <tbody className="tabular-nums">
-            {d.itens.map((i) => (
-              <tr key={i.id} className="border-t">
-                <td className="py-2">{i.especie}</td>
-                <td>
-                  <a
-                    href={`/sistema/estoque/${i.estoqueItemId}`}
-                    className="text-primary hover:underline"
-                  >
-                    {formatBitola(i.espessuraCm, i.larguraCm, i.comprimentoM)}
-                  </a>
-                </td>
-                <td>{i.qualidade}</td>
-                <td className="text-right">{i.quantidade.toLocaleString("pt-BR")}</td>
-                <td className="text-right">{formatM3(i.volumeM3)}</td>
-                <td className="text-right">{formatMoeda(i.precoM3)}</td>
-                <td className="text-right font-medium">{formatMoeda(i.valorTotal)}</td>
-              </tr>
-            ))}
+            {d.itens.map((i) =>
+              i.unidade === "UN" ? (
+                <tr key={i.id} className="border-t">
+                  <td className="py-2" colSpan={3}>
+                    <span className="font-medium">{i.produto}</span>
+                    {i.dimensoes && <span className="text-muted-foreground"> · {i.dimensoes}</span>}
+                  </td>
+                  <td className="text-right">{i.quantidade.toLocaleString("pt-BR")} un.</td>
+                  <td className="text-muted-foreground text-right">—</td>
+                  <td className="text-right">{formatMoeda(i.precoUnitario)}/un.</td>
+                  <td className="text-right font-medium">{formatMoeda(i.valorTotal)}</td>
+                </tr>
+              ) : (
+                <tr key={i.id} className="border-t">
+                  <td className="py-2">{i.especie}</td>
+                  <td>
+                    <a
+                      href={`/sistema/estoque/${i.estoqueItemId}`}
+                      className="text-primary hover:underline"
+                    >
+                      {formatBitola(i.espessuraCm ?? 0, i.larguraCm ?? 0, i.comprimentoM ?? 0)}
+                    </a>
+                  </td>
+                  <td>{i.qualidade}</td>
+                  <td className="text-right">{i.quantidade.toLocaleString("pt-BR")}</td>
+                  <td className="text-right">{formatM3(i.volumeM3)}</td>
+                  <td className="text-right">{formatMoeda(i.precoM3)}</td>
+                  <td className="text-right font-medium">{formatMoeda(i.valorTotal)}</td>
+                </tr>
+              )
+            )}
           </tbody>
         </table>
       </section>

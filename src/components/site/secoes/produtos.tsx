@@ -2,6 +2,7 @@
 
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from "framer-motion"
 import { Check, RotateCw } from "lucide-react"
+import { IconeCaixote, IconePalete } from "@/components/site/icones-animados"
 import { useState, type MouseEvent } from "react"
 
 import { BotaoAnimado } from "@/components/site/botao-animado"
@@ -141,6 +142,34 @@ export function Produtos() {
             </Revelar>
           ))}
         </div>
+        <div className="mt-20">
+          <Revelar className="mb-8 text-center">
+            <span className="bg-floresta/10 text-floresta mb-3 inline-block rounded-full px-3 py-1 text-xs font-semibold tracking-wider uppercase">
+              Vendidos por unidade
+            </span>
+            <h3 className="font-heading text-2xl font-semibold md:text-4xl">Também fabricamos</h3>
+          </Revelar>
+          <div className="grid gap-5 md:grid-cols-3">
+            {siteConfig.outrosProdutos.map((p, i) => (
+              <Revelar key={p.nome} atraso={i * 0.1}>
+                <motion.div
+                  whileHover={{ y: -6, rotate: i === 1 ? 0 : i === 0 ? -0.6 : 0.6 }}
+                  className="group bg-card hover:shadow-primary/10 flex h-full flex-col gap-3 rounded-3xl border p-6 shadow-sm transition-shadow hover:shadow-xl"
+                >
+                  <span className="text-primary flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30">
+                    {p.icone === "caixote" ? <IconeCaixote /> : <IconePalete />}
+                  </span>
+                  <div>
+                    <h4 className="font-heading text-xl font-semibold">{p.nome}</h4>
+                    <p className="text-primary text-sm font-medium">{p.medida}</p>
+                  </div>
+                  <p className="text-muted-foreground text-sm">{p.descricao}</p>
+                </motion.div>
+              </Revelar>
+            ))}
+          </div>
+        </div>
+
         <Revelar className="mt-12 flex justify-center">
           <BotaoAnimado href="#contato" variante="floresta">
             Pedir orçamento da minha medida

@@ -101,6 +101,30 @@ export function IconeSerra({ className }: { className?: string }) {
   )
 }
 
+/** Palete visto em perspectiva — tábuas e blocos desenhados no traço. */
+export function IconePalete({ className = "size-8" }: { className?: string }) {
+  return (
+    <SvgDesenhado className={className}>
+      <motion.path d="M3 9h18M3 12h18" variants={traco} custom={0} />
+      <motion.path d="M4 12v4M12 12v4M20 12v4" variants={traco} custom={1} />
+      <motion.path d="M3 16h18M3 19h18" variants={traco} custom={2} />
+      <motion.path d="M6 6.5h12" variants={traco} custom={3} />
+    </SvgDesenhado>
+  )
+}
+
+/** Caixote de feira — ripas laterais e alças. */
+export function IconeCaixote({ className = "size-8" }: { className?: string }) {
+  return (
+    <SvgDesenhado className={className}>
+      <motion.path d="M3 8h18v11H3z" variants={traco} custom={0} />
+      <motion.path d="M3 12h18M3 15.5h18" variants={traco} custom={1} />
+      <motion.path d="M9 10h6" variants={traco} custom={2} />
+      <motion.path d="M5 8V5h14v3" variants={traco} custom={3} />
+    </SvgDesenhado>
+  )
+}
+
 export const ICONES_SERRARIA = [
   {
     id: "arvore",

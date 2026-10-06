@@ -12,10 +12,12 @@ import {
   zUuidOpcional,
 } from "@/lib/validacao"
 
+/** Item da venda: madeira serrada do estoque (M3) ou produto vendido por unidade (UN). */
 export const itemVendaSchema = z.object({
-  estoqueItemId: zUuid("o item do estoque"),
+  tipo: z.enum(["M3", "UN"]),
+  itemId: zUuid("o item"),
   quantidade: zInteiro({ min: 1, rotulo: "Quantidade" }),
-  precoM3: zNumeroBR({ min: 0, rotulo: "Preço por m³" }),
+  preco: zNumeroBR({ min: 0, rotulo: "Preço" }),
 })
 
 export const vendaSchema = z
@@ -45,13 +47,14 @@ export const vendaSchema = z
   .superRefine((v, ctx) => {
     const vistos = new Set<string>()
     v.itens.forEach((i, k) => {
-      if (vistos.has(i.estoqueItemId))
+      const chave = `${i.tipo}:${i.itemId}`
+      if (vistos.has(chave))
         ctx.addIssue({
           code: "custom",
-          path: ["itens", k, "estoqueItemId"],
+          path: ["itens", k, "itemId"],
           message: "Item repetido — some a quantidade na mesma linha",
         })
-      vistos.add(i.estoqueItemId)
+      vistos.add(chave)
     })
   })
 

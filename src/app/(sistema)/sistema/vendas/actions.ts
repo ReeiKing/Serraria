@@ -9,6 +9,8 @@ import {
   especies,
   estoqueItens,
   estoqueMov,
+  produtos,
+  produtosMov,
   qualidades,
   romaneios,
   vendas,
@@ -18,7 +20,7 @@ import {
 import { executar } from "@/lib/acoes"
 import { paraNumeric } from "@/lib/calculos"
 import { cancelamentoVendaSchema, vendaSchema } from "@/lib/schemas/vendas"
-import { calcularVenda, descricaoItem } from "@/lib/vendas"
+import { calcularVenda, descricaoItem, descricaoProduto } from "@/lib/vendas"
 
 function revalidar(id?: string) {
   revalidatePath("/sistema/vendas")
@@ -38,14 +40,15 @@ async function confirmar(tx: Tx, vendaId: string, permitirNegativo: boolean) {
 
   const itens = await tx.select().from(vendasItens).where(eq(vendasItens.vendaId, vendaId))
   for (const item of itens) {
-    await tx.insert(estoqueMov).values({
-      estoqueItemId: item.estoqueItemId,
-      tipo: "venda",
+    const mov = {
+      tipo: "venda" as const,
       quantidade: -item.quantidade,
       vendaId,
       permitirNegativo,
       observacao: `Venda nº ${v.numero}`,
-    })
+    }
+    if (item.produtoId) await tx.insert(produtosMov).values({ ...mov, produtoId: item.produtoId })
+    else await tx.insert(estoqueMov).values({ ...mov, estoqueItemId: item.estoqueItemId! })
   }
   const [r] = await tx.insert(romaneios).values({ vendaId }).returning({ numero: romaneios.numero })
   return r!.numero
@@ -60,29 +63,47 @@ export async function salvarVenda(
     const d = vendaSchema.parse(entrada)
 
     const resultado = await comUsuario(async (tx) => {
-      // dados atuais dos itens (medidas, espécie e qualidade) — nunca confiamos no navegador
-      const ids = d.itens.map((i) => i.estoqueItemId)
-      const info = await tx
-        .select({
-          id: estoqueItens.id,
-          especie: especies.nome,
-          qualidade: qualidades.nome,
-          espessuraCm: estoqueItens.espessuraCm,
-          larguraCm: estoqueItens.larguraCm,
-          comprimentoM: estoqueItens.comprimentoM,
-        })
-        .from(estoqueItens)
-        .innerJoin(especies, eq(especies.id, estoqueItens.especieId))
-        .innerJoin(qualidades, eq(qualidades.id, estoqueItens.qualidadeId))
-        .where(inArray(estoqueItens.id, ids))
-      const porId = new Map(info.map((i) => [i.id, i]))
+      // dados atuais dos itens (medidas, espécie, qualidade, produto) — nunca confiamos no navegador
+      const idsM3 = d.itens.filter((i) => i.tipo === "M3").map((i) => i.itemId)
+      const idsUN = d.itens.filter((i) => i.tipo === "UN").map((i) => i.itemId)
+      const [infoM3, infoUN] = await Promise.all([
+        idsM3.length
+          ? tx
+              .select({
+                id: estoqueItens.id,
+                especie: especies.nome,
+                qualidade: qualidades.nome,
+                espessuraCm: estoqueItens.espessuraCm,
+                larguraCm: estoqueItens.larguraCm,
+                comprimentoM: estoqueItens.comprimentoM,
+              })
+              .from(estoqueItens)
+              .innerJoin(especies, eq(especies.id, estoqueItens.especieId))
+              .innerJoin(qualidades, eq(qualidades.id, estoqueItens.qualidadeId))
+              .where(inArray(estoqueItens.id, idsM3))
+          : [],
+        idsUN.length
+          ? tx
+              .select({ id: produtos.id, nome: produtos.nome, dimensoes: produtos.dimensoes })
+              .from(produtos)
+              .where(inArray(produtos.id, idsUN))
+          : [],
+      ])
+      const m3 = new Map(infoM3.map((i) => [i.id, i]))
+      const un = new Map(infoUN.map((i) => [i.id, i]))
       const itens = d.itens.map((i) => {
-        const e = porId.get(i.estoqueItemId)
+        if (i.tipo === "UN") {
+          const p = un.get(i.itemId)
+          if (!p) throw new Error("Um dos produtos não existe mais.")
+          return { ...i, unidade: "UN" as const, descricao: descricaoProduto(p) }
+        }
+        const e = m3.get(i.itemId)
         if (!e) throw new Error("Um dos itens não existe mais no estoque.")
-        return { ...i, ...e }
+        return { ...i, ...e, unidade: "M3" as const, descricao: descricaoItem(e) }
       })
       const calc = calcularVenda(itens, d.valorFrete, d.desconto)
-      if (calc.valorTotal <= 0 && calc.totalM3 <= 0) throw new Error("A venda está vazia.")
+      if (calc.valorTotal <= 0 && calc.totalM3 <= 0 && calc.totalUnidades <= 0)
+        throw new Error("A venda está vazia.")
 
       const valores = {
         clienteId: d.clienteId,
@@ -103,6 +124,7 @@ export async function salvarVenda(
         documentoFlorestal: d.documentoFlorestal,
         observacoes: d.observacoes,
         totalPecas: calc.totalPecas,
+        totalUnidades: calc.totalUnidades,
         totalM3: paraNumeric(calc.totalM3, 6),
         valorProdutos: paraNumeric(calc.valorProdutos, 2),
         valorTotal: paraNumeric(calc.valorTotal, 2),
@@ -126,11 +148,14 @@ export async function salvarVenda(
       await tx.insert(vendasItens).values(
         itens.map((i, k) => ({
           vendaId,
-          estoqueItemId: i.estoqueItemId,
-          descricao: descricaoItem(i),
+          unidade: i.unidade,
+          estoqueItemId: i.unidade === "M3" ? i.itemId : null,
+          produtoId: i.unidade === "UN" ? i.itemId : null,
+          descricao: i.descricao,
           quantidade: i.quantidade,
           volumeM3: paraNumeric(calc.linhas[k]!.volumeM3, 6),
-          precoM3: paraNumeric(i.precoM3, 2),
+          precoM3: i.unidade === "M3" ? paraNumeric(i.preco, 2) : null,
+          precoUnitario: i.unidade === "UN" ? paraNumeric(i.preco, 2) : null,
           valorTotal: paraNumeric(calc.linhas[k]!.valor, 2),
         }))
       )
@@ -171,13 +196,15 @@ export async function cancelarVenda(id: string, entrada: unknown) {
       if (atual.status === "confirmada") {
         const itens = await tx.select().from(vendasItens).where(eq(vendasItens.vendaId, id))
         for (const item of itens) {
-          await tx.insert(estoqueMov).values({
-            estoqueItemId: item.estoqueItemId,
-            tipo: "estorno_venda",
+          const mov = {
+            tipo: "estorno_venda" as const,
             quantidade: item.quantidade,
             vendaId: id,
             observacao: `Cancelamento da venda nº ${atual.numero}: ${motivo}`,
-          })
+          }
+          if (item.produtoId)
+            await tx.insert(produtosMov).values({ ...mov, produtoId: item.produtoId })
+          else await tx.insert(estoqueMov).values({ ...mov, estoqueItemId: item.estoqueItemId! })
         }
       }
       await tx

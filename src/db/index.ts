@@ -14,7 +14,15 @@ export * from "./gerado/schema"
 
 // O pooler do Supabase em modo transaction não suporta prepared statements.
 const globalForDb = globalThis as unknown as { pg?: ReturnType<typeof postgres> }
-const client = globalForDb.pg ?? postgres(env.DATABASE_URL, { prepare: false, max: 10 })
+const client =
+  globalForDb.pg ??
+  postgres(env.DATABASE_URL, {
+    prepare: false,
+    max: 10,
+    // não guardar a numeração interna dos tipos: depois de um `db:reset` ela muda e a
+    // conexão antiga leria enums (ex.: categoria) como lista. Não usamos arrays de tipos próprios.
+    fetch_types: false,
+  })
 if (process.env.NODE_ENV !== "production") globalForDb.pg = client
 
 /**

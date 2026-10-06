@@ -3,21 +3,21 @@
 import {
   pgTable,
   index,
+  uniqueIndex,
   foreignKey,
-  unique,
   pgPolicy,
   check,
   uuid,
-  bigint,
-  date,
+  text,
   numeric,
   integer,
-  text,
-  timestamp,
   boolean,
-  uniqueIndex,
-  smallint,
+  timestamp,
+  unique,
+  bigint,
+  date,
   char,
+  smallint,
   jsonb,
   pgView,
   pgEnum,
@@ -29,6 +29,7 @@ const users = authUsers
 export const usersInAuth = authUsers
 
 export const ambienteNfe = pgEnum("ambiente_nfe", ["homologacao", "producao"])
+export const categoriaProduto = pgEnum("categoria_produto", ["caixote", "palete", "outro"])
 export const formaPagamento = pgEnum("forma_pagamento", [
   "dinheiro",
   "pix",
@@ -82,6 +83,339 @@ export const tipoVeiculo = pgEnum("tipo_veiculo", [
   "outro",
 ])
 export const unidadeMedida = pgEnum("unidade_medida", ["st", "m3", "t"])
+
+export const produtos = pgTable(
+  "produtos",
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    nome: text().notNull(),
+    categoria: categoriaProduto().default("outro").notNull(),
+    descricao: text(),
+    dimensoes: text(),
+    especieId: uuid("especie_id"),
+    ncm: text(),
+    precoVenda: numeric("preco_venda", { precision: 14, scale: 2 }).default("0").notNull(),
+    saldoUnidades: integer("saldo_unidades").default(0).notNull(),
+    estoqueMinimo: integer("estoque_minimo").default(0).notNull(),
+    ativo: boolean().default(true).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    createdBy: uuid("created_by"),
+    updatedBy: uuid("updated_by"),
+  },
+  (table) => [
+    index("produtos_especie").using("btree", table.especieId.asc().nullsLast().op("uuid_ops")),
+    uniqueIndex("produtos_nome").using("btree", sql`lower(nome)`),
+    foreignKey({
+      columns: [table.createdBy],
+      foreignColumns: [users.id],
+      name: "produtos_created_by_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.especieId],
+      foreignColumns: [especies.id],
+      name: "produtos_especie_id_fkey",
+    }),
+    foreignKey({
+      columns: [table.updatedBy],
+      foreignColumns: [users.id],
+      name: "produtos_updated_by_fkey",
+    }).onDelete("set null"),
+    pgPolicy("usuario ativo", {
+      as: "permissive",
+      for: "all",
+      to: ["authenticated"],
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+    }),
+    check("produtos_estoque_minimo_check", sql`estoque_minimo >= 0`),
+    check("produtos_ncm_check", sql`ncm ~ '^\d{8}$'::text`),
+    check("produtos_preco_venda_check", sql`preco_venda >= (0)::numeric`),
+  ]
+)
+
+export const producoesProdutos = pgTable(
+  "producoes_produtos",
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    // You can use { mode: "bigint" } if numbers are exceeding js number limitations
+    numero: bigint({ mode: "number" }).generatedAlwaysAsIdentity({
+      name: "producoes_produtos_numero_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 9223372036854775807,
+      cache: 1,
+    }),
+    dataProducao: date("data_producao")
+      .default(sql`CURRENT_DATE`)
+      .notNull(),
+    totalUnidades: integer("total_unidades").default(0).notNull(),
+    observacoes: text(),
+    estornadaEm: timestamp("estornada_em", { withTimezone: true, mode: "string" }),
+    motivoEstorno: text("motivo_estorno"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    createdBy: uuid("created_by"),
+    updatedBy: uuid("updated_by"),
+  },
+  (table) => [
+    index("producoes_produtos_data").using(
+      "btree",
+      table.dataProducao.desc().nullsFirst().op("date_ops")
+    ),
+    foreignKey({
+      columns: [table.createdBy],
+      foreignColumns: [users.id],
+      name: "producoes_produtos_created_by_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.updatedBy],
+      foreignColumns: [users.id],
+      name: "producoes_produtos_updated_by_fkey",
+    }).onDelete("set null"),
+    unique("producoes_produtos_numero_key").on(table.numero),
+    pgPolicy("usuario ativo", {
+      as: "permissive",
+      for: "all",
+      to: ["authenticated"],
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+    }),
+  ]
+)
+
+export const producoesProdutosItens = pgTable(
+  "producoes_produtos_itens",
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    producaoId: uuid("producao_id").notNull(),
+    produtoId: uuid("produto_id").notNull(),
+    quantidade: integer().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    createdBy: uuid("created_by"),
+    updatedBy: uuid("updated_by"),
+  },
+  (table) => [
+    index("producoes_produtos_itens_producao").using(
+      "btree",
+      table.producaoId.asc().nullsLast().op("uuid_ops")
+    ),
+    index("producoes_produtos_itens_produto").using(
+      "btree",
+      table.produtoId.asc().nullsLast().op("uuid_ops")
+    ),
+    foreignKey({
+      columns: [table.createdBy],
+      foreignColumns: [users.id],
+      name: "producoes_produtos_itens_created_by_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.producaoId],
+      foreignColumns: [producoesProdutos.id],
+      name: "producoes_produtos_itens_producao_id_fkey",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.produtoId],
+      foreignColumns: [produtos.id],
+      name: "producoes_produtos_itens_produto_id_fkey",
+    }),
+    foreignKey({
+      columns: [table.updatedBy],
+      foreignColumns: [users.id],
+      name: "producoes_produtos_itens_updated_by_fkey",
+    }).onDelete("set null"),
+    pgPolicy("usuario ativo", {
+      as: "permissive",
+      for: "all",
+      to: ["authenticated"],
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+    }),
+    check("producoes_produtos_itens_quantidade_check", sql`quantidade > 0`),
+  ]
+)
+
+export const produtosMov = pgTable(
+  "produtos_mov",
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    produtoId: uuid("produto_id").notNull(),
+    tipo: tipoMovEstoque().notNull(),
+    quantidade: integer().notNull(),
+    saldoApos: integer("saldo_apos"),
+    motivo: motivoAjuste(),
+    observacao: text(),
+    permitirNegativo: boolean("permitir_negativo").default(false).notNull(),
+    producaoId: uuid("producao_id"),
+    vendaId: uuid("venda_id"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    createdBy: uuid("created_by"),
+    updatedBy: uuid("updated_by"),
+  },
+  (table) => [
+    index("produtos_mov_producao").using(
+      "btree",
+      table.producaoId.asc().nullsLast().op("uuid_ops")
+    ),
+    index("produtos_mov_produto").using(
+      "btree",
+      table.produtoId.asc().nullsLast().op("timestamptz_ops"),
+      table.createdAt.desc().nullsFirst().op("timestamptz_ops")
+    ),
+    index("produtos_mov_venda").using("btree", table.vendaId.asc().nullsLast().op("uuid_ops")),
+    foreignKey({
+      columns: [table.createdBy],
+      foreignColumns: [users.id],
+      name: "produtos_mov_created_by_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.producaoId],
+      foreignColumns: [producoesProdutos.id],
+      name: "produtos_mov_producao_id_fkey",
+    }),
+    foreignKey({
+      columns: [table.produtoId],
+      foreignColumns: [produtos.id],
+      name: "produtos_mov_produto_id_fkey",
+    }),
+    foreignKey({
+      columns: [table.updatedBy],
+      foreignColumns: [users.id],
+      name: "produtos_mov_updated_by_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.vendaId],
+      foreignColumns: [vendas.id],
+      name: "produtos_mov_venda_id_fkey",
+    }),
+    pgPolicy("usuario ativo", {
+      as: "permissive",
+      for: "all",
+      to: ["authenticated"],
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+    }),
+    check("produtos_mov_check", sql`(tipo <> 'ajuste'::tipo_mov_estoque) OR (motivo IS NOT NULL)`),
+    check("produtos_mov_quantidade_check", sql`quantidade <> 0`),
+  ]
+)
+
+export const vendas = pgTable(
+  "vendas",
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    // You can use { mode: "bigint" } if numbers are exceeding js number limitations
+    numero: bigint({ mode: "number" }).generatedAlwaysAsIdentity({
+      name: "vendas_numero_seq",
+      startWith: 1,
+      increment: 1,
+      minValue: 1,
+      maxValue: 9223372036854775807,
+      cache: 1,
+    }),
+    clienteId: uuid("cliente_id").notNull(),
+    motoristaId: uuid("motorista_id"),
+    veiculoId: uuid("veiculo_id"),
+    placa: text(),
+    destinoCep: text("destino_cep"),
+    destinoLogradouro: text("destino_logradouro"),
+    destinoNumero: text("destino_numero"),
+    destinoComplemento: text("destino_complemento"),
+    destinoBairro: text("destino_bairro"),
+    destinoMunicipio: text("destino_municipio"),
+    destinoCodigoIbge: text("destino_codigo_ibge"),
+    destinoUf: char("destino_uf", { length: 2 }),
+    tipoFrete: tipoFrete("tipo_frete").default("sem_frete").notNull(),
+    valorFrete: numeric("valor_frete", { precision: 14, scale: 2 }).default("0").notNull(),
+    desconto: numeric({ precision: 14, scale: 2 }).default("0").notNull(),
+    totalPecas: integer("total_pecas").default(0).notNull(),
+    totalM3: numeric("total_m3", { precision: 14, scale: 6 }).default("0").notNull(),
+    valorProdutos: numeric("valor_produtos", { precision: 14, scale: 2 }).default("0").notNull(),
+    valorTotal: numeric("valor_total", { precision: 14, scale: 2 }).default("0").notNull(),
+    status: statusVenda().default("rascunho").notNull(),
+    documentoFlorestal: text("documento_florestal"),
+    observacoes: text(),
+    confirmadaEm: timestamp("confirmada_em", { withTimezone: true, mode: "string" }),
+    entregueEm: timestamp("entregue_em", { withTimezone: true, mode: "string" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    createdBy: uuid("created_by"),
+    updatedBy: uuid("updated_by"),
+    canceladaEm: timestamp("cancelada_em", { withTimezone: true, mode: "string" }),
+    motivoCancelamento: text("motivo_cancelamento"),
+    totalUnidades: integer("total_unidades").default(0).notNull(),
+  },
+  (table) => [
+    index("vendas_cliente").using("btree", table.clienteId.asc().nullsLast().op("uuid_ops")),
+    index("vendas_created_at").using(
+      "btree",
+      table.createdAt.desc().nullsFirst().op("timestamptz_ops")
+    ),
+    index("vendas_motorista").using("btree", table.motoristaId.asc().nullsLast().op("uuid_ops")),
+    index("vendas_status").using("btree", table.status.asc().nullsLast().op("enum_ops")),
+    index("vendas_veiculo").using("btree", table.veiculoId.asc().nullsLast().op("uuid_ops")),
+    foreignKey({
+      columns: [table.clienteId],
+      foreignColumns: [clientes.id],
+      name: "vendas_cliente_id_fkey",
+    }),
+    foreignKey({
+      columns: [table.createdBy],
+      foreignColumns: [users.id],
+      name: "vendas_created_by_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.motoristaId],
+      foreignColumns: [motoristas.id],
+      name: "vendas_motorista_id_fkey",
+    }),
+    foreignKey({
+      columns: [table.updatedBy],
+      foreignColumns: [users.id],
+      name: "vendas_updated_by_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.veiculoId],
+      foreignColumns: [veiculos.id],
+      name: "vendas_veiculo_id_fkey",
+    }),
+    unique("vendas_numero_key").on(table.numero),
+    pgPolicy("usuario ativo", {
+      as: "permissive",
+      for: "all",
+      to: ["authenticated"],
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+    }),
+    check("vendas_desconto_check", sql`desconto >= (0)::numeric`),
+    check("vendas_destino_cep_check", sql`destino_cep ~ '^\d{8}$'::text`),
+    check("vendas_destino_codigo_ibge_check", sql`destino_codigo_ibge ~ '^\d{7}$'::text`),
+    check("vendas_valor_frete_check", sql`valor_frete >= (0)::numeric`),
+  ]
+)
 
 export const producoes = pgTable(
   "producoes",
@@ -1077,64 +1411,6 @@ export const producoesItens = pgTable(
   ]
 )
 
-export const vendasItens = pgTable(
-  "vendas_itens",
-  {
-    id: uuid().defaultRandom().primaryKey().notNull(),
-    vendaId: uuid("venda_id").notNull(),
-    estoqueItemId: uuid("estoque_item_id").notNull(),
-    descricao: text().notNull(),
-    quantidade: integer().notNull(),
-    volumeM3: numeric("volume_m3", { precision: 14, scale: 6 }).notNull(),
-    precoM3: numeric("preco_m3", { precision: 14, scale: 2 }).notNull(),
-    valorTotal: numeric("valor_total", { precision: 14, scale: 2 }).notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
-      .defaultNow()
-      .notNull(),
-    createdBy: uuid("created_by"),
-    updatedBy: uuid("updated_by"),
-  },
-  (table) => [
-    index("vendas_itens_estoque_item").using(
-      "btree",
-      table.estoqueItemId.asc().nullsLast().op("uuid_ops")
-    ),
-    index("vendas_itens_venda").using("btree", table.vendaId.asc().nullsLast().op("uuid_ops")),
-    foreignKey({
-      columns: [table.createdBy],
-      foreignColumns: [users.id],
-      name: "vendas_itens_created_by_fkey",
-    }).onDelete("set null"),
-    foreignKey({
-      columns: [table.estoqueItemId],
-      foreignColumns: [estoqueItens.id],
-      name: "vendas_itens_estoque_item_id_fkey",
-    }),
-    foreignKey({
-      columns: [table.updatedBy],
-      foreignColumns: [users.id],
-      name: "vendas_itens_updated_by_fkey",
-    }).onDelete("set null"),
-    foreignKey({
-      columns: [table.vendaId],
-      foreignColumns: [vendas.id],
-      name: "vendas_itens_venda_id_fkey",
-    }).onDelete("cascade"),
-    pgPolicy("usuario ativo", {
-      as: "permissive",
-      for: "all",
-      to: ["authenticated"],
-      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
-      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
-    }),
-    check("vendas_itens_preco_m3_check", sql`preco_m3 >= (0)::numeric`),
-    check("vendas_itens_quantidade_check", sql`quantidade > 0`),
-  ]
-)
-
 export const romaneios = pgTable(
   "romaneios",
   {
@@ -1491,103 +1767,6 @@ export const auditoria = pgTable(
   ]
 )
 
-export const vendas = pgTable(
-  "vendas",
-  {
-    id: uuid().defaultRandom().primaryKey().notNull(),
-    // You can use { mode: "bigint" } if numbers are exceeding js number limitations
-    numero: bigint({ mode: "number" }).generatedAlwaysAsIdentity({
-      name: "vendas_numero_seq",
-      startWith: 1,
-      increment: 1,
-      minValue: 1,
-      maxValue: 9223372036854775807,
-      cache: 1,
-    }),
-    clienteId: uuid("cliente_id").notNull(),
-    motoristaId: uuid("motorista_id"),
-    veiculoId: uuid("veiculo_id"),
-    placa: text(),
-    destinoCep: text("destino_cep"),
-    destinoLogradouro: text("destino_logradouro"),
-    destinoNumero: text("destino_numero"),
-    destinoComplemento: text("destino_complemento"),
-    destinoBairro: text("destino_bairro"),
-    destinoMunicipio: text("destino_municipio"),
-    destinoCodigoIbge: text("destino_codigo_ibge"),
-    destinoUf: char("destino_uf", { length: 2 }),
-    tipoFrete: tipoFrete("tipo_frete").default("sem_frete").notNull(),
-    valorFrete: numeric("valor_frete", { precision: 14, scale: 2 }).default("0").notNull(),
-    desconto: numeric({ precision: 14, scale: 2 }).default("0").notNull(),
-    totalPecas: integer("total_pecas").default(0).notNull(),
-    totalM3: numeric("total_m3", { precision: 14, scale: 6 }).default("0").notNull(),
-    valorProdutos: numeric("valor_produtos", { precision: 14, scale: 2 }).default("0").notNull(),
-    valorTotal: numeric("valor_total", { precision: 14, scale: 2 }).default("0").notNull(),
-    status: statusVenda().default("rascunho").notNull(),
-    documentoFlorestal: text("documento_florestal"),
-    observacoes: text(),
-    confirmadaEm: timestamp("confirmada_em", { withTimezone: true, mode: "string" }),
-    entregueEm: timestamp("entregue_em", { withTimezone: true, mode: "string" }),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
-      .defaultNow()
-      .notNull(),
-    createdBy: uuid("created_by"),
-    updatedBy: uuid("updated_by"),
-    canceladaEm: timestamp("cancelada_em", { withTimezone: true, mode: "string" }),
-    motivoCancelamento: text("motivo_cancelamento"),
-  },
-  (table) => [
-    index("vendas_cliente").using("btree", table.clienteId.asc().nullsLast().op("uuid_ops")),
-    index("vendas_created_at").using(
-      "btree",
-      table.createdAt.desc().nullsFirst().op("timestamptz_ops")
-    ),
-    index("vendas_motorista").using("btree", table.motoristaId.asc().nullsLast().op("uuid_ops")),
-    index("vendas_status").using("btree", table.status.asc().nullsLast().op("enum_ops")),
-    index("vendas_veiculo").using("btree", table.veiculoId.asc().nullsLast().op("uuid_ops")),
-    foreignKey({
-      columns: [table.clienteId],
-      foreignColumns: [clientes.id],
-      name: "vendas_cliente_id_fkey",
-    }),
-    foreignKey({
-      columns: [table.createdBy],
-      foreignColumns: [users.id],
-      name: "vendas_created_by_fkey",
-    }).onDelete("set null"),
-    foreignKey({
-      columns: [table.motoristaId],
-      foreignColumns: [motoristas.id],
-      name: "vendas_motorista_id_fkey",
-    }),
-    foreignKey({
-      columns: [table.updatedBy],
-      foreignColumns: [users.id],
-      name: "vendas_updated_by_fkey",
-    }).onDelete("set null"),
-    foreignKey({
-      columns: [table.veiculoId],
-      foreignColumns: [veiculos.id],
-      name: "vendas_veiculo_id_fkey",
-    }),
-    unique("vendas_numero_key").on(table.numero),
-    pgPolicy("usuario ativo", {
-      as: "permissive",
-      for: "all",
-      to: ["authenticated"],
-      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
-      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
-    }),
-    check("vendas_desconto_check", sql`desconto >= (0)::numeric`),
-    check("vendas_destino_cep_check", sql`destino_cep ~ '^\d{8}$'::text`),
-    check("vendas_destino_codigo_ibge_check", sql`destino_codigo_ibge ~ '^\d{7}$'::text`),
-    check("vendas_valor_frete_check", sql`valor_frete >= (0)::numeric`),
-  ]
-)
-
 export const especies = pgTable(
   "especies",
   {
@@ -1632,6 +1811,79 @@ export const especies = pgTable(
     check("especies_fator_t_m3_check", sql`fator_t_m3 > (0)::numeric`),
     check("especies_ncm_serrada_check", sql`ncm_serrada ~ '^\d{8}$'::text`),
     check("especies_ncm_tora_check", sql`ncm_tora ~ '^\d{8}$'::text`),
+  ]
+)
+
+export const vendasItens = pgTable(
+  "vendas_itens",
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    vendaId: uuid("venda_id").notNull(),
+    estoqueItemId: uuid("estoque_item_id"),
+    descricao: text().notNull(),
+    quantidade: integer().notNull(),
+    volumeM3: numeric("volume_m3", { precision: 14, scale: 6 }).notNull(),
+    precoM3: numeric("preco_m3", { precision: 14, scale: 2 }),
+    valorTotal: numeric("valor_total", { precision: 14, scale: 2 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+    createdBy: uuid("created_by"),
+    updatedBy: uuid("updated_by"),
+    produtoId: uuid("produto_id"),
+    unidade: text().default("M3").notNull(),
+    precoUnitario: numeric("preco_unitario", { precision: 14, scale: 2 }),
+  },
+  (table) => [
+    index("vendas_itens_estoque_item").using(
+      "btree",
+      table.estoqueItemId.asc().nullsLast().op("uuid_ops")
+    ),
+    index("vendas_itens_produto").using("btree", table.produtoId.asc().nullsLast().op("uuid_ops")),
+    index("vendas_itens_venda").using("btree", table.vendaId.asc().nullsLast().op("uuid_ops")),
+    foreignKey({
+      columns: [table.createdBy],
+      foreignColumns: [users.id],
+      name: "vendas_itens_created_by_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.estoqueItemId],
+      foreignColumns: [estoqueItens.id],
+      name: "vendas_itens_estoque_item_id_fkey",
+    }),
+    foreignKey({
+      columns: [table.produtoId],
+      foreignColumns: [produtos.id],
+      name: "vendas_itens_produto_id_fkey",
+    }),
+    foreignKey({
+      columns: [table.updatedBy],
+      foreignColumns: [users.id],
+      name: "vendas_itens_updated_by_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.vendaId],
+      foreignColumns: [vendas.id],
+      name: "vendas_itens_venda_id_fkey",
+    }).onDelete("cascade"),
+    pgPolicy("usuario ativo", {
+      as: "permissive",
+      for: "all",
+      to: ["authenticated"],
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+    }),
+    check("vendas_itens_preco_m3_check", sql`preco_m3 >= (0)::numeric`),
+    check("vendas_itens_preco_unitario_check", sql`preco_unitario >= (0)::numeric`),
+    check("vendas_itens_quantidade_check", sql`quantidade > 0`),
+    check(
+      "vendas_itens_tipo",
+      sql`((unidade = 'M3'::text) AND (estoque_item_id IS NOT NULL) AND (produto_id IS NULL) AND (preco_m3 IS NOT NULL)) OR ((unidade = 'UN'::text) AND (produto_id IS NOT NULL) AND (estoque_item_id IS NULL) AND (preco_unitario IS NOT NULL))`
+    ),
+    check("vendas_itens_unidade_check", sql`unidade = ANY (ARRAY['M3'::text, 'UN'::text])`),
   ]
 )
 export const estoqueTorasEquivalente = pgView("estoque_toras_equivalente", {

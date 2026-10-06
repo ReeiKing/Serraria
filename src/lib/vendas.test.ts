@@ -11,14 +11,14 @@ describe("calcularVenda", () => {
           larguraCm: 9,
           comprimentoM: 1.2,
           quantidade: "100",
-          precoM3: "1.200",
+          preco: "1.200",
         },
         {
           espessuraCm: "2.50",
           larguraCm: "30.00",
           comprimentoM: "3.000",
           quantidade: "40",
-          precoM3: "1000",
+          preco: "1000",
         },
       ],
       "150",
@@ -38,16 +38,27 @@ describe("calcularVenda", () => {
         larguraCm: "9.00",
         comprimentoM: "1.200",
         quantidade: "100",
-        precoM3: "1.200",
+        preco: "1.200",
       },
     ])
     expect(r.totalM3).toBe(0.1944)
     expect(r.valorTotal).toBe(233.28)
   })
+  it("produto por unidade junto com madeira serrada", () => {
+    const r = calcularVenda([
+      { espessuraCm: 1.8, larguraCm: 9, comprimentoM: 1.2, quantidade: "100", preco: "1200" },
+      { unidade: "UN", quantidade: "50", preco: "75,90" },
+    ])
+    expect(r.linhas[1]).toMatchObject({ unidade: "UN", volumeM3: 0, valor: 3795 })
+    expect(r.totalPecas).toBe(100)
+    expect(r.totalUnidades).toBe(50)
+    expect(r.totalM3).toBe(0.1944)
+    expect(r.valorTotal).toBe(4028.28)
+  })
   it("item sem quantidade não soma", () => {
     expect(
       calcularVenda([
-        { espessuraCm: 5, larguraCm: 10, comprimentoM: 3, quantidade: "", precoM3: 1000 },
+        { espessuraCm: 5, larguraCm: 10, comprimentoM: 3, quantidade: "", preco: 1000 },
       ]).valorTotal
     ).toBe(0)
   })

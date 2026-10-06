@@ -10,6 +10,7 @@ import {
   Wallet,
   WalletCards,
   DollarSign,
+  Package,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -187,15 +188,10 @@ export default async function PainelPage({
           atraso={0.24}
         />
         <CartaoIndicador
-          titulo="Ticket médio"
-          icone={<DollarSign />}
-          valor={
-            <NumeroAnimado
-              valor={i.vendasQtd ? i.faturamento / i.vendasQtd : null}
-              formato="moeda"
-            />
-          }
-          detalhe="por venda no período"
+          titulo="Paletes e caixotes"
+          icone={<Package />}
+          valor={<NumeroAnimado valor={i.unidades} formato="inteiro" />}
+          detalhe={`unidades vendidas · ${formatMoeda(i.unidadesValor)}`}
           atraso={0.28}
         />
       </div>

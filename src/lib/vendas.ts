@@ -2,11 +2,16 @@ import { somar, totalVenda, valorTotal, volumePecasM3 } from "./calculos"
 import { formatBitola, parseNumeroBR } from "./format"
 
 export type ItemVendaCalculo = {
-  espessuraCm: string | number
-  larguraCm: string | number
-  comprimentoM: string | number
+  /** "M3": madeira serrada vendida por m³ · "UN": produto vendido por unidade. Padrão: M3 */
+  unidade?: "M3" | "UN"
+  /** Medidas do item de estoque (só M3): número ou texto técnico do banco ("1.200" = 1,2). */
+  espessuraCm?: string | number | null
+  larguraCm?: string | number | null
+  comprimentoM?: string | number | null
+  /** Digitados pela pessoa (formato brasileiro, "1.200,50"). */
   quantidade: string | number
-  precoM3: string | number
+  /** R$ por m³ (M3) ou R$ por unidade (UN). */
+  preco: string | number
 }
 
 /** Valor digitado pela pessoa (padrão brasileiro). */
@@ -23,10 +28,23 @@ export function calcularVenda(
   desconto: string | number = 0
 ) {
   const linhas = itens.map((i) => {
-    const qtd = Math.trunc(n(i.quantidade))
+    const qtd = Math.max(Math.trunc(n(i.quantidade)), 0)
+    if (i.unidade === "UN") {
+      return {
+        unidade: "UN" as const,
+        quantidade: qtd,
+        volumeM3: 0,
+        valor: valorTotal(qtd, n(i.preco)),
+      }
+    }
     const volumeM3 =
       qtd > 0 ? volumePecasM3(db(i.espessuraCm), db(i.larguraCm), db(i.comprimentoM), qtd) : 0
-    return { quantidade: Math.max(qtd, 0), volumeM3, valor: valorTotal(volumeM3, n(i.precoM3)) }
+    return {
+      unidade: "M3" as const,
+      quantidade: qtd,
+      volumeM3,
+      valor: valorTotal(volumeM3, n(i.preco)),
+    }
   })
   const valorProdutos = somar(
     linhas.map((l) => l.valor),
@@ -34,14 +52,28 @@ export function calcularVenda(
   )
   return {
     linhas,
-    totalPecas: linhas.reduce((a, l) => a + l.quantidade, 0),
+    /** peças de madeira serrada */
+    totalPecas: linhas.filter((l) => l.unidade === "M3").reduce((a, l) => a + l.quantidade, 0),
+    /** unidades de produtos (paletes, caixotes…) */
+    totalUnidades: linhas.filter((l) => l.unidade === "UN").reduce((a, l) => a + l.quantidade, 0),
     totalM3: somar(linhas.map((l) => l.volumeM3)),
     valorProdutos,
     valorTotal: totalVenda(valorProdutos, n(frete), n(desconto)),
   }
 }
 
-/** Descrição do item na venda, romaneio e NF-e. */
+/** Descrição do produto por unidade na venda, romaneio e NF-e. */
+export function descricaoProduto(p: { nome: string; dimensoes?: string | null }) {
+  return p.dimensoes ? `${p.nome} (${p.dimensoes})` : p.nome
+}
+
+export const CATEGORIAS_PRODUTO = [
+  { valor: "palete", rotulo: "Palete" },
+  { valor: "caixote", rotulo: "Caixote" },
+  { valor: "outro", rotulo: "Outro" },
+] as const
+
+/** Descrição do item de madeira serrada na venda, romaneio e NF-e. */
 export function descricaoItem(i: {
   especie: string
   qualidade: string

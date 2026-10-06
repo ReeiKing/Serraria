@@ -22,6 +22,8 @@ export async function dadosPainel(tx: Tx, p: Periodo) {
     vendido_m3: string
     faturamento: string
     vendas_qtd: number
+    unidades: number
+    unidades_valor: string
     a_pagar: string
     a_pagar_qtd: number
     estoque_baixo: number
@@ -44,6 +46,10 @@ export async function dadosPainel(tx: Tx, p: Periodo) {
       (select coalesce(sum(v.total_m3), 0) from public.vendas v where ${VENDIDA} and ${entre("v.confirmada_em")}) as vendido_m3,
       (select coalesce(sum(v.valor_total), 0) from public.vendas v where ${VENDIDA} and ${entre("v.confirmada_em")}) as faturamento,
       (select count(*)::int from public.vendas v where ${VENDIDA} and ${entre("v.confirmada_em")}) as vendas_qtd,
+      (select coalesce(sum(vi.quantidade), 0)::int from public.vendas v join public.vendas_itens vi on vi.venda_id = v.id
+        where vi.unidade = 'UN' and ${VENDIDA} and ${entre("v.confirmada_em")}) as unidades,
+      (select coalesce(sum(vi.valor_total), 0) from public.vendas v join public.vendas_itens vi on vi.venda_id = v.id
+        where vi.unidade = 'UN' and ${VENDIDA} and ${entre("v.confirmada_em")}) as unidades_valor,
       (select coalesce(sum(valor_total - valor_pago), 0) from public.entradas_toras where status_pagamento <> 'pago') as a_pagar,
       (select count(*)::int from public.entradas_toras where status_pagamento <> 'pago') as a_pagar_qtd,
       (select count(*)::int from public.estoque_itens
@@ -142,6 +148,8 @@ export async function dadosPainel(tx: Tx, p: Periodo) {
       vendidoM3: Number(i.vendido_m3),
       faturamento: Number(i.faturamento),
       vendasQtd: i.vendas_qtd,
+      unidades: i.unidades,
+      unidadesValor: Number(i.unidades_valor),
       aPagar: Number(i.a_pagar),
       aPagarQtd: i.a_pagar_qtd,
       estoqueBaixo: i.estoque_baixo,

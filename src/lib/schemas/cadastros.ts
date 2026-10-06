@@ -192,3 +192,14 @@ export const novoUsuarioSchema = z.object({
 export const senhaSchema = z.object({
   senha: z.string().min(8, "Mínimo de 8 caracteres"),
 })
+
+export const produtoSchema = z.object({
+  nome: zTextoObrigatorio("Nome"),
+  categoria: z.enum(["palete", "caixote", "outro"]),
+  descricao: zTextoOpcional,
+  dimensoes: zTextoOpcional,
+  especieId: zUuidOpcional,
+  ncm: zNcm,
+  precoVenda: zNumeroBR({ min: 0, rotulo: "Preço" }),
+  estoqueMinimo: zNumeroBR({ min: 0, rotulo: "Mínimo" }).refine(Number.isInteger, "Número inteiro"),
+})
