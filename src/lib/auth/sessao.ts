@@ -7,13 +7,10 @@ import { cache } from "react"
 import { comUsuario, usuarios } from "@/db"
 import { createClient } from "@/lib/supabase/server"
 
-import type { Papel } from "./papeis"
-
 export type UsuarioLogado = {
   id: string
   nome: string
   email: string
-  papel: Papel
 }
 
 /** Usuário logado e ativo (uma consulta por requisição), ou null. */
@@ -29,20 +26,18 @@ export const obterUsuario = cache(async (): Promise<UsuarioLogado | null> => {
         id: usuarios.id,
         nome: usuarios.nome,
         email: usuarios.email,
-        papel: usuarios.papel,
         ativo: usuarios.ativo,
       })
       .from(usuarios)
       .where(eq(usuarios.id, id))
   )
   if (!perfil?.ativo) return null
-  return { id: perfil.id, nome: perfil.nome, email: perfil.email, papel: perfil.papel }
+  return { id: perfil.id, nome: perfil.nome, email: perfil.email }
 })
 
-/** Exige login (e opcionalmente um dos papéis); redireciona caso contrário. */
-export async function exigirUsuario(...papeis: Papel[]): Promise<UsuarioLogado> {
+/** Exige login; sem sessão válida, redireciona para /login. */
+export async function exigirUsuario(): Promise<UsuarioLogado> {
   const usuario = await obterUsuario()
   if (!usuario) redirect("/login")
-  if (papeis.length && !papeis.includes(usuario.papel)) redirect("/sistema?sem-permissao=1")
   return usuario
 }

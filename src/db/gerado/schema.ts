@@ -89,7 +89,7 @@ export const usuarios = pgTable(
     id: uuid().primaryKey().notNull(),
     nome: text().notNull(),
     email: text().notNull(),
-    papel: papelUsuario().default("patio").notNull(),
+    papel: papelUsuario().default("admin").notNull(),
     ativo: boolean().default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .defaultNow()
@@ -116,13 +116,13 @@ export const usuarios = pgTable(
       foreignColumns: [users.id],
       name: "usuarios_updated_by_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`((id = ( SELECT auth.uid() AS uid)) OR ( SELECT private.tem_papel(VARIADIC ARRAY['admin'::papel_usuario]) AS tem_papel))`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
   ]
 )
 
@@ -159,7 +159,6 @@ export const empresas = pgTable(
     cstCofins: text("cst_cofins").default("07").notNull(),
     aliquotaCofins: numeric("aliquota_cofins", { precision: 5, scale: 2 }).default("0").notNull(),
     informacoesComplementares: text("informacoes_complementares"),
-    patioVeValores: boolean("patio_ve_valores").default(false).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),
@@ -181,15 +180,13 @@ export const empresas = pgTable(
       foreignColumns: [users.id],
       name: "empresas_updated_by_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check("empresas_cep_check", sql`cep ~ '^\d{8}$'::text`),
     check("empresas_cnpj_check", sql`cnpj ~ '^\d{14}$'::text`),
     check("empresas_codigo_ibge_check", sql`codigo_ibge ~ '^\d{7}$'::text`),
@@ -239,15 +236,13 @@ export const fornecedores = pgTable(
       foreignColumns: [users.id],
       name: "fornecedores_updated_by_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check("fornecedores_cep_check", sql`cep ~ '^\d{8}$'::text`),
     check("fornecedores_documento_check", sql`documento ~ '^(\d{11}|\d{14})$'::text`),
   ]
@@ -298,15 +293,13 @@ export const clientes = pgTable(
       foreignColumns: [users.id],
       name: "clientes_updated_by_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check("clientes_cep_check", sql`cep ~ '^\d{8}$'::text`),
     check("clientes_codigo_ibge_check", sql`codigo_ibge ~ '^\d{7}$'::text`),
     check("clientes_documento_check", sql`documento ~ '^(\d{11}|\d{14})$'::text`),
@@ -347,15 +340,13 @@ export const motoristas = pgTable(
       foreignColumns: [users.id],
       name: "motoristas_updated_by_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check("motoristas_cpf_check", sql`cpf ~ '^\d{11}$'::text`),
   ]
 )
@@ -401,15 +392,13 @@ export const veiculos = pgTable(
       foreignColumns: [users.id],
       name: "veiculos_updated_by_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check("veiculos_placa_check", sql`placa ~ '^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$'::text`),
     check("veiculos_tara_kg_check", sql`tara_kg >= (0)::numeric`),
   ]
@@ -446,15 +435,13 @@ export const especies = pgTable(
       foreignColumns: [users.id],
       name: "especies_updated_by_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check("especies_ncm_serrada_check", sql`ncm_serrada ~ '^\d{8}$'::text`),
     check("especies_ncm_tora_check", sql`ncm_tora ~ '^\d{8}$'::text`),
   ]
@@ -488,15 +475,13 @@ export const qualidades = pgTable(
       foreignColumns: [users.id],
       name: "qualidades_updated_by_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
   ]
 )
 
@@ -555,15 +540,13 @@ export const tabelaPrecos = pgTable(
       foreignColumns: [users.id],
       name: "tabela_precos_updated_by_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check(
       "tabela_precos_check",
       sql`(tipo = 'compra_tora'::tipo_preco) OR ((unidade = 'm3'::unidade_medida) AND (qualidade_id IS NOT NULL))`
@@ -669,15 +652,13 @@ export const entradasToras = pgTable(
       name: "entradas_toras_veiculo_id_fkey",
     }),
     unique("entradas_toras_numero_key").on(table.numero),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check("entradas_toras_carga_altura_m_check", sql`carga_altura_m > (0)::numeric`),
     check("entradas_toras_carga_comprimento_m_check", sql`carga_comprimento_m > (0)::numeric`),
     check("entradas_toras_carga_largura_m_check", sql`carga_largura_m > (0)::numeric`),
@@ -737,15 +718,13 @@ export const entradasTorasItens = pgTable(
       foreignColumns: [users.id],
       name: "entradas_toras_itens_updated_by_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check("entradas_toras_itens_comprimento_m_check", sql`comprimento_m > (0)::numeric`),
     check("entradas_toras_itens_diametro_cm_check", sql`diametro_cm > (0)::numeric`),
     check("entradas_toras_itens_quantidade_check", sql`quantidade > 0`),
@@ -793,15 +772,13 @@ export const entradasTorasPagamentos = pgTable(
       foreignColumns: [users.id],
       name: "entradas_toras_pagamentos_updated_by_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check("entradas_toras_pagamentos_valor_check", sql`valor > (0)::numeric`),
   ]
 )
@@ -865,15 +842,13 @@ export const estoqueTorasMov = pgTable(
       foreignColumns: [users.id],
       name: "estoque_toras_mov_updated_by_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check(
       "estoque_toras_mov_check",
       sql`(tipo <> 'ajuste'::tipo_mov_tora) OR (motivo IS NOT NULL)`
@@ -941,15 +916,13 @@ export const estoqueItens = pgTable(
       foreignColumns: [users.id],
       name: "estoque_itens_updated_by_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check("estoque_itens_comprimento_m_check", sql`comprimento_m > (0)::numeric`),
     check("estoque_itens_espessura_cm_check", sql`espessura_cm > (0)::numeric`),
     check("estoque_itens_estoque_minimo_pecas_check", sql`estoque_minimo_pecas >= 0`),
@@ -1012,15 +985,13 @@ export const estoqueMov = pgTable(
       foreignColumns: [vendas.id],
       name: "estoque_mov_venda_fk",
     }),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check("estoque_mov_check", sql`(tipo <> 'ajuste'::tipo_mov_estoque) OR (motivo IS NOT NULL)`),
     check("estoque_mov_quantidade_check", sql`quantidade <> 0`),
   ]
@@ -1078,15 +1049,13 @@ export const producoes = pgTable(
       name: "producoes_updated_by_fkey",
     }).onDelete("set null"),
     unique("producoes_numero_key").on(table.numero),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check("producoes_toras_consumidas_m3_check", sql`toras_consumidas_m3 > (0)::numeric`),
   ]
 )
@@ -1138,15 +1107,13 @@ export const producoesItens = pgTable(
       foreignColumns: [users.id],
       name: "producoes_itens_updated_by_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check("producoes_itens_quantidade_check", sql`quantidade > 0`),
   ]
 )
@@ -1232,15 +1199,13 @@ export const vendas = pgTable(
       name: "vendas_veiculo_id_fkey",
     }),
     unique("vendas_numero_key").on(table.numero),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check("vendas_desconto_check", sql`desconto >= (0)::numeric`),
     check("vendas_destino_cep_check", sql`destino_cep ~ '^\d{8}$'::text`),
     check("vendas_destino_codigo_ibge_check", sql`destino_codigo_ibge ~ '^\d{7}$'::text`),
@@ -1294,15 +1259,13 @@ export const vendasItens = pgTable(
       foreignColumns: [vendas.id],
       name: "vendas_itens_venda_id_fkey",
     }).onDelete("cascade"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check("vendas_itens_preco_m3_check", sql`preco_m3 >= (0)::numeric`),
     check("vendas_itens_quantidade_check", sql`quantidade > 0`),
   ]
@@ -1354,15 +1317,13 @@ export const romaneios = pgTable(
     }),
     unique("romaneios_numero_key").on(table.numero),
     unique("romaneios_venda_id_key").on(table.vendaId),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio,patio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
   ]
 )
 
@@ -1432,15 +1393,13 @@ export const notasFiscais = pgTable(
       name: "notas_fiscais_venda_id_fkey",
     }),
     unique("notas_fiscais_referencia_key").on(table.referencia),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check("notas_fiscais_chave_check", sql`chave ~ '^\d{44}$'::text`),
   ]
 )
@@ -1488,15 +1447,13 @@ export const nfeEventos = pgTable(
       foreignColumns: [users.id],
       name: "nfe_eventos_updated_by_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
     check(
       "nfe_eventos_check",
       sql`(tipo <> 'cancelamento'::tipo_evento_nfe) OR (char_length(texto) >= 15)`
@@ -1550,15 +1507,13 @@ export const nfeLogs = pgTable(
       foreignColumns: [users.id],
       name: "nfe_logs_updated_by_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo", {
       as: "permissive",
-      for: "select",
+      for: "all",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio}'::papel_usuario[]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
+      withCheck: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
   ]
 )
 
@@ -1598,16 +1553,13 @@ export const orcamentosSite = pgTable(
       foreignColumns: [users.id],
       name: "orcamentos_site_updated_by_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("site envia orcamento", {
       as: "permissive",
-      for: "select",
-      to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC '{admin,escritorio}'::papel_usuario[]) AS tem_papel)`,
+      for: "insert",
+      to: ["anon"],
+      withCheck: sql`(status = 'novo'::status_orcamento)`,
     }),
-    pgPolicy("inserir", { as: "permissive", for: "insert", to: ["authenticated"] }),
-    pgPolicy("alterar", { as: "permissive", for: "update", to: ["authenticated"] }),
-    pgPolicy("excluir", { as: "permissive", for: "delete", to: ["authenticated"] }),
-    pgPolicy("site envia orcamento", { as: "permissive", for: "insert", to: ["anon"] }),
+    pgPolicy("usuario ativo", { as: "permissive", for: "all", to: ["authenticated"] }),
     check("orcamentos_site_cidade_check", sql`char_length(cidade) <= 120`),
     check("orcamentos_site_email_check", sql`char_length(email) <= 200`),
     check("orcamentos_site_mensagem_check", sql`char_length(mensagem) <= 2000`),
@@ -1662,11 +1614,11 @@ export const auditoria = pgTable(
       foreignColumns: [users.id],
       name: "auditoria_usuario_id_fkey",
     }).onDelete("set null"),
-    pgPolicy("ler", {
+    pgPolicy("usuario ativo le", {
       as: "permissive",
       for: "select",
       to: ["authenticated"],
-      using: sql`( SELECT private.tem_papel(VARIADIC ARRAY['admin'::papel_usuario]) AS tem_papel)`,
+      using: sql`( SELECT private.usuario_ativo() AS usuario_ativo)`,
     }),
     check(
       "auditoria_acao_check",

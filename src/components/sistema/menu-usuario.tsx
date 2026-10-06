@@ -13,9 +13,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { NOMES_PAPEIS, type Papel } from "@/lib/auth/papeis"
 
-export function MenuUsuario({ nome, email, papel }: { nome: string; email: string; papel: Papel }) {
+export function MenuUsuario({ nome, email }: { nome: string; email: string }) {
   const iniciais = nome
     .split(" ")
     .slice(0, 2)
@@ -31,10 +30,7 @@ export function MenuUsuario({ nome, email, papel }: { nome: string; email: strin
               {iniciais}
             </AvatarFallback>
           </Avatar>
-          <span className="hidden text-left leading-tight sm:block">
-            <span className="block text-sm font-medium">{nome}</span>
-            <span className="text-muted-foreground block text-xs">{NOMES_PAPEIS[papel]}</span>
-          </span>
+          <span className="hidden text-sm font-medium sm:block">{nome}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">

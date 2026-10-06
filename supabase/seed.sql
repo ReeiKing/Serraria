@@ -16,33 +16,22 @@ insert into public.qualidades (nome, ordem) values
 insert into public.empresas (razao_social, nome_fantasia, cnpj, ie, crt, cep, logradouro, numero, bairro, municipio, codigo_ibge, uf, telefone, email)
 values ('Serraria Modelo Ltda', 'Serraria Modelo', '00000000000191', 'ISENTO', 1, '84000000', 'Rodovia Exemplo, km 0', 's/n', 'Zona Rural', 'Ponta Grossa', '4119905', 'PR', '4200000000', 'contato@serrariamodelo.com.br');
 
--- Usuários locais (senha: madeira123). O gatilho cria o perfil em public.usuarios.
-do $$
-declare
-  u record;
-begin
-  for u in select * from (values
-    ('00000000-0000-0000-0000-000000000001'::uuid, 'admin@madeireira.local', 'Administrador', 'admin'),
-    ('00000000-0000-0000-0000-000000000002'::uuid, 'escritorio@madeireira.local', 'Escritório', 'escritorio'),
-    ('00000000-0000-0000-0000-000000000003'::uuid, 'patio@madeireira.local', 'Pátio', 'patio')
-  ) as t(id, email, nome, papel) loop
-    insert into auth.users (
-      instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
-      raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
-      confirmation_token, recovery_token, email_change_token_new, email_change
-    ) values (
-      '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authenticated', u.email,
-      extensions.crypt('madeira123', extensions.gen_salt('bf')), now(),
-      jsonb_build_object('provider', 'email', 'providers', array['email'], 'nome', u.nome, 'papel', u.papel),
-      '{}'::jsonb, now(), now(), '', '', '', ''
-    );
-    insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
-    values (gen_random_uuid(), u.id, u.id::text,
-      jsonb_build_object('sub', u.id::text, 'email', u.email, 'email_verified', true),
-      'email', now(), now(), now());
-  end loop;
-end;
-$$;
+-- Usuário local (senha: madeira123). O gatilho cria o perfil em public.usuarios.
+insert into auth.users (
+  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+  confirmation_token, recovery_token, email_change_token_new, email_change
+) values (
+  '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001',
+  'authenticated', 'authenticated', 'secretaria@madeireira.local',
+  extensions.crypt('madeira123', extensions.gen_salt('bf')), now(),
+  '{"provider": "email", "providers": ["email"], "nome": "Secretária"}'::jsonb,
+  '{}'::jsonb, now(), now(), '', '', '', ''
+);
+insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+values (gen_random_uuid(), '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001',
+  '{"sub": "00000000-0000-0000-0000-000000000001", "email": "secretaria@madeireira.local", "email_verified": true}'::jsonb,
+  'email', now(), now(), now());
 
 -- Preços iniciais de exemplo
 insert into public.tabela_precos (tipo, especie_id, qualidade_id, unidade, valor, vigencia_inicio)

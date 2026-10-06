@@ -35,13 +35,9 @@ npm run dev                  # http://localhost:3000  ·  login em /login
 
 Serviços locais: Studio em http://127.0.0.1:54323 · e-mails de teste (Mailpit) em http://127.0.0.1:54324.
 
-### Usuários de desenvolvimento (criados pelo seed)
+### Usuário de desenvolvimento (criado pelo seed)
 
-| E-mail                      | Papel         | Senha      |
-| --------------------------- | ------------- | ---------- |
-| admin@madeireira.local      | Administrador | madeira123 |
-| escritorio@madeireira.local | Escritório    | madeira123 |
-| patio@madeireira.local      | Pátio         | madeira123 |
+E-mail **secretaria@madeireira.local** · senha **madeira123**
 
 O cadastro público está desligado: usuários são criados pelo administrador.
 `npm run db:reset` recria o banco do zero (migrations + seed).
@@ -72,7 +68,7 @@ src/
   lib/
     env.ts             variáveis de ambiente validadas com Zod (somente servidor)
     format.ts          formatação brasileira (R$, vírgula decimal, datas no fuso de SP)
-    auth/              sessão, papéis e `exigirUsuario`
+    auth/              sessão e `exigirUsuario`
     supabase/          clientes Supabase (browser, servidor e middleware)
   middleware.ts        renova a sessão e protege /sistema
 supabase/
@@ -91,13 +87,13 @@ supabase/
 - **Estoque**: o saldo só muda por movimentação (`estoque_mov`), atualizado na mesma transação,
   com trava de linha; saldo negativo é bloqueado salvo confirmação explícita (`permitir_negativo`).
   O kardex é imutável.
-- **RLS** ligado em todas as tabelas, com políticas por papel:
-  - _Administrador_: tudo. _Escritório_: cadastros, financeiro, vendas e fiscal.
-  - _Pátio_: entradas de toras, produção e estoque; consulta cargas; não vê NF-e, pagamentos nem auditoria.
+- **Acesso único**: não há perfis com permissões diferentes — todo usuário ativo gerencia tudo
+  (a operação é feita por uma secretária). O RLS está ligado em todas as tabelas e exige usuário
+  logado e ativo; desativar um usuário corta o acesso dele na hora. Visitantes do site só podem
+  enviar orçamentos.
 - No servidor, as ações do usuário rodam com `comUsuario()`, que abre a transação com o papel
   `authenticated` e o JWT do usuário — o RLS vale também para as consultas via Drizzle.
   `dbSistema` (sem RLS) fica reservado a rotinas sem usuário, como webhooks.
-- Papel do usuário fica em `usuarios.papel` (definido pelo admin / `app_metadata`), nunca em `user_metadata`.
 
 ## Convenções
 

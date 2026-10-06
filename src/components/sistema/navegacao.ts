@@ -11,13 +11,10 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-import type { Papel } from "@/lib/auth/papeis"
-
 export type ItemMenu = {
   titulo: string
   href: string
   icone: LucideIcon
-  papeis?: Papel[]
   /** Módulo ainda não construído: aparece desabilitado. */
   emBreve?: boolean
 }
@@ -31,14 +28,12 @@ export const MENU: ItemMenu[] = [
     titulo: "Vendas e romaneios",
     href: "/sistema/vendas",
     icone: Tags,
-    papeis: ["admin", "escritorio"],
     emBreve: true,
   },
   {
     titulo: "Notas fiscais",
     href: "/sistema/nfe",
     icone: FileText,
-    papeis: ["admin", "escritorio"],
     emBreve: true,
   },
   { titulo: "Cadastros", href: "/sistema/cadastros", icone: Building2, emBreve: true },
@@ -46,12 +41,7 @@ export const MENU: ItemMenu[] = [
     titulo: "Relatórios",
     href: "/sistema/relatorios",
     icone: BarChart3,
-    papeis: ["admin", "escritorio"],
     emBreve: true,
   },
-  { titulo: "Usuários", href: "/sistema/usuarios", icone: Users, papeis: ["admin"], emBreve: true },
+  { titulo: "Usuários", href: "/sistema/usuarios", icone: Users, emBreve: true },
 ]
-
-export function menuDoPapel(papel: Papel) {
-  return MENU.filter((item) => !item.papeis || item.papeis.includes(papel))
-}

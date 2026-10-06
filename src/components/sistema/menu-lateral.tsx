@@ -5,17 +5,16 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
-import type { Papel } from "@/lib/auth/papeis"
 import { cn } from "@/lib/utils"
 
-import { menuDoPapel } from "./navegacao"
+import { MENU } from "./navegacao"
 
-export function MenuLateral({ papel, aoNavegar }: { papel: Papel; aoNavegar?: () => void }) {
+export function MenuLateral({ aoNavegar }: { aoNavegar?: () => void }) {
   const pathname = usePathname()
 
   return (
     <nav aria-label="Menu principal" className="flex flex-col gap-1">
-      {menuDoPapel(papel).map((item) => {
+      {MENU.map((item) => {
         const ativo =
           item.href === "/sistema" ? pathname === item.href : pathname.startsWith(item.href)
         const Icone = item.icone

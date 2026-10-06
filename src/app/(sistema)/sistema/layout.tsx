@@ -29,15 +29,15 @@ export default async function SistemaLayout({ children }: { children: React.Reac
             {siteConfig.nome}
           </span>
         </Link>
-        <MenuLateral papel={usuario.papel} />
+        <MenuLateral />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="bg-background/80 sticky top-0 z-30 flex h-14 items-center gap-2 border-b px-4 backdrop-blur">
-          <MenuMobile papel={usuario.papel} nomeEmpresa={siteConfig.nome} />
+          <MenuMobile nomeEmpresa={siteConfig.nome} />
           <div className="ml-auto flex items-center gap-1">
             <AlternarTema />
-            <MenuUsuario nome={usuario.nome} email={usuario.email} papel={usuario.papel} />
+            <MenuUsuario nome={usuario.nome} email={usuario.email} />
           </div>
         </header>
         <main className="flex-1 p-4 md:p-6">
