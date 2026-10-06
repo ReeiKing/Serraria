@@ -24,12 +24,14 @@ update public.usuarios set ativo = false where id = :inativo;
 select is((select nome from public.usuarios where id = :inativo), 'Inativo', 'gatilho cria o perfil com o nome do app_metadata');
 
 -- Dados de apoio (como superusuário)
-insert into public.fornecedores (id, nome) values ('10000000-0000-0000-0000-000000000001', 'Fornecedor Teste');
+insert into public.fornecedores (id, nome) values ('f1000000-0000-0000-0000-000000000001', 'Fornecedor Teste');
+-- espécie própria do teste para não colidir com os dados de exemplo
+insert into public.especies (id, nome) values ('f5000000-0000-0000-0000-000000000001', 'Espécie de teste pgTAP');
 insert into public.estoque_itens (id, especie_id, qualidade_id, espessura_cm, largura_cm, comprimento_m)
-select '30000000-0000-0000-0000-000000000001', e.id, q.id, 1.8, 9, 1.2
-  from public.especies e, public.qualidades q where e.nome = 'Pinus' and q.ordem = 1;
+select 'f3000000-0000-0000-0000-000000000001', 'f5000000-0000-0000-0000-000000000001', q.id, 1.8, 9, 1.2
+  from public.qualidades q where q.ordem = 1;
 
-select is((select volume_peca_m3 from public.estoque_itens where id = '30000000-0000-0000-0000-000000000001'),
+select is((select volume_peca_m3 from public.estoque_itens where id = 'f3000000-0000-0000-0000-000000000001'),
   0.001944::numeric, 'volume da peça 1,8 × 9 × 1,20 = 0,001944 m³');
 
 -- ---------------------------------------------------------------- secretária
@@ -37,44 +39,44 @@ select pg_temp.logar(:secretaria);
 
 select lives_ok($$
   insert into public.entradas_toras (id, especie_id, fornecedor_id, modo_medicao, quantidade, unidade, valor_unitario, valor_total)
-  select '40000000-0000-0000-0000-000000000001', id, '10000000-0000-0000-0000-000000000001', 'm3', 10, 'm3', 150, 1500
+  select 'f4000000-0000-0000-0000-000000000001', id, 'f1000000-0000-0000-0000-000000000001', 'm3', 10, 'm3', 150, 1500
     from public.especies where nome = 'Pinus'
 $$, 'lança entrada de toras');
 
-select is((select created_by from public.entradas_toras where id = '40000000-0000-0000-0000-000000000001'),
+select is((select created_by from public.entradas_toras where id = 'f4000000-0000-0000-0000-000000000001'),
   :secretaria::uuid, 'created_by preenchido com o usuário logado');
 
 select lives_ok($$
-  insert into public.clientes (razao_social, documento) values ('Cliente Teste', '11444777000161')
+  insert into public.clientes (razao_social, documento) values ('Cliente Teste', '52998224725')
 $$, 'cadastra cliente');
 
-insert into public.entradas_toras_pagamentos (entrada_id, valor, forma) values ('40000000-0000-0000-0000-000000000001', 500, 'pix');
-select is((select status_pagamento::text from public.entradas_toras where id = '40000000-0000-0000-0000-000000000001'), 'parcial', 'pagamento parcial atualiza status');
+insert into public.entradas_toras_pagamentos (entrada_id, valor, forma) values ('f4000000-0000-0000-0000-000000000001', 500, 'pix');
+select is((select status_pagamento::text from public.entradas_toras where id = 'f4000000-0000-0000-0000-000000000001'), 'parcial', 'pagamento parcial atualiza status');
 
-insert into public.entradas_toras_pagamentos (entrada_id, valor, forma) values ('40000000-0000-0000-0000-000000000001', 1000, 'transferencia');
-select is((select status_pagamento::text from public.entradas_toras where id = '40000000-0000-0000-0000-000000000001'), 'pago', 'quitação atualiza status para pago');
+insert into public.entradas_toras_pagamentos (entrada_id, valor, forma) values ('f4000000-0000-0000-0000-000000000001', 1000, 'transferencia');
+select is((select status_pagamento::text from public.entradas_toras where id = 'f4000000-0000-0000-0000-000000000001'), 'pago', 'quitação atualiza status para pago');
 
 select throws_ok($$
-  update public.estoque_itens set saldo_pecas = 999 where id = '30000000-0000-0000-0000-000000000001'
+  update public.estoque_itens set saldo_pecas = 999 where id = 'f3000000-0000-0000-0000-000000000001'
 $$, 'P0001', null, 'saldo não pode ser editado direto no item');
 
 select lives_ok($$
-  insert into public.estoque_mov (estoque_item_id, tipo, quantidade) values ('30000000-0000-0000-0000-000000000001', 'producao', 100)
+  insert into public.estoque_mov (estoque_item_id, tipo, quantidade) values ('f3000000-0000-0000-0000-000000000001', 'producao', 100)
 $$, 'produção entra no kardex');
 
-select is((select saldo_pecas from public.estoque_itens where id = '30000000-0000-0000-0000-000000000001'), 100, 'saldo atualizado pela movimentação');
-select is((select saldo_m3 from public.estoque_itens where id = '30000000-0000-0000-0000-000000000001'), 0.194400::numeric, '100 peças = 0,1944 m³');
+select is((select saldo_pecas from public.estoque_itens where id = 'f3000000-0000-0000-0000-000000000001'), 100, 'saldo atualizado pela movimentação');
+select is((select saldo_m3 from public.estoque_itens where id = 'f3000000-0000-0000-0000-000000000001'), 0.194400::numeric, '100 peças = 0,1944 m³');
 
 select throws_ok($$
-  insert into public.estoque_mov (estoque_item_id, tipo, quantidade, motivo) values ('30000000-0000-0000-0000-000000000001', 'ajuste', -150, 'perda')
+  insert into public.estoque_mov (estoque_item_id, tipo, quantidade, motivo) values ('f3000000-0000-0000-0000-000000000001', 'ajuste', -150, 'perda')
 $$, 'P0001', null, 'bloqueia saldo negativo sem confirmação');
 
 select lives_ok($$
-  insert into public.estoque_mov (estoque_item_id, tipo, quantidade, motivo, permitir_negativo) values ('30000000-0000-0000-0000-000000000001', 'ajuste', -150, 'perda', true)
+  insert into public.estoque_mov (estoque_item_id, tipo, quantidade, motivo, permitir_negativo) values ('f3000000-0000-0000-0000-000000000001', 'ajuste', -150, 'perda', true)
 $$, 'permite saldo negativo com confirmação explícita');
 
 select throws_ok($$
-  delete from public.estoque_mov where estoque_item_id = '30000000-0000-0000-0000-000000000001'
+  delete from public.estoque_mov where estoque_item_id = 'f3000000-0000-0000-0000-000000000001'
 $$, 'P0001', null, 'kardex é imutável');
 
 select ok((select count(*) from public.auditoria where tabela = 'entradas_toras' and usuario_id = :secretaria::uuid) > 0, 'auditoria registra quem criou');
