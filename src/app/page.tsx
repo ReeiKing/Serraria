@@ -1,15 +1,73 @@
-import { TreePine } from "lucide-react"
+import type { Metadata } from "next"
 
+import { Cabecalho } from "@/components/site/secoes/cabecalho"
+import { ComoFunciona } from "@/components/site/secoes/como-funciona"
+import { Contato } from "@/components/site/secoes/contato"
+import { Depoimentos } from "@/components/site/secoes/depoimentos"
+import { Diferenciais } from "@/components/site/secoes/diferenciais"
+import { Faq } from "@/components/site/secoes/faq"
+import { Hero } from "@/components/site/secoes/hero"
+import { Produtos } from "@/components/site/secoes/produtos"
+import { Rodape } from "@/components/site/secoes/rodape"
+import { WhatsAppFlutuante } from "@/components/site/secoes/whatsapp"
 import { siteConfig } from "@/config/site"
 
-// Placeholder: a landing page animada é construída na Fase 10.
+export const metadata: Metadata = {
+  title: `${siteConfig.nome} — Pinus e Eucalipto serrados`,
+  description: siteConfig.descricao,
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: siteConfig.url,
+    siteName: siteConfig.nome,
+    title: `${siteConfig.nome} — Pinus e Eucalipto serrados`,
+    description: siteConfig.descricao,
+  },
+}
+
+const dadosEstruturados = {
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  name: siteConfig.nome,
+  description: siteConfig.descricao,
+  url: siteConfig.url,
+  telephone: siteConfig.contato.telefone,
+  email: siteConfig.contato.email,
+  foundingDate: String(siteConfig.fundacao),
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: siteConfig.endereco.logradouro,
+    addressLocality: siteConfig.endereco.municipio,
+    addressRegion: siteConfig.endereco.uf,
+    postalCode: siteConfig.endereco.cep,
+    addressCountry: "BR",
+  },
+  makesOffer: siteConfig.produtos.map((p) => ({
+    "@type": "Offer",
+    itemOffered: { "@type": "Product", name: `Madeira serrada de ${p.especie}` },
+  })),
+}
+
 export default function Home() {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6 text-center">
-      <TreePine className="text-floresta size-12" aria-hidden />
-      <h1 className="font-heading text-primary text-4xl font-semibold">{siteConfig.nome}</h1>
-      <p className="text-muted-foreground max-w-md">{siteConfig.slogan}</p>
-      <p className="text-muted-foreground text-sm">Sistema em construção.</p>
-    </main>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(dadosEstruturados) }}
+      />
+      <Cabecalho />
+      <main>
+        <Hero />
+        <Diferenciais />
+        <Produtos />
+        <ComoFunciona />
+        <Depoimentos />
+        <Faq />
+        <Contato />
+      </main>
+      <Rodape />
+      <WhatsAppFlutuante />
+    </>
   )
 }

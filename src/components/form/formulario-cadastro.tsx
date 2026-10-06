@@ -70,7 +70,9 @@ export function FormularioCadastro<S extends z.ZodType<unknown, FieldValues>>({
       }
     })
 
-  const onSubmit = form.handleSubmit((valores) => executar(() => salvar(valores), mensagemSucesso))
+  // O resolver valida no navegador, mas o servidor recebe os valores como digitados
+  // (texto) e faz a própria validação/conversão com o mesmo schema.
+  const onSubmit = form.handleSubmit(() => executar(() => salvar(form.getValues()), mensagemSucesso))
 
   return (
     <FormProvider {...form}>

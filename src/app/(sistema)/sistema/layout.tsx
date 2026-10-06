@@ -1,7 +1,7 @@
-import { TreePine } from "lucide-react"
 import type { Metadata } from "next"
 import Link from "next/link"
 
+import { Marca } from "@/components/marca"
 import { AlternarTema } from "@/components/sistema/alternar-tema"
 import { MenuLateral } from "@/components/sistema/menu-lateral"
 import { MenuMobile } from "@/components/sistema/menu-mobile"
@@ -22,9 +22,7 @@ export default async function SistemaLayout({ children }: { children: React.Reac
     <div className="flex min-h-dvh">
       <aside className="bg-sidebar sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-6 border-r p-4 lg:flex">
         <Link href="/sistema" className="flex items-center gap-2 px-2 pt-1">
-          <span className="bg-primary text-primary-foreground flex size-9 items-center justify-center rounded-lg">
-            <TreePine className="size-5" aria-hidden />
-          </span>
+          <Marca className="size-9" />
           <span className="font-heading text-lg leading-tight font-semibold">
             {siteConfig.nome}
           </span>
