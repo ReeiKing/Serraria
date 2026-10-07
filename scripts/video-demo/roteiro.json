@@ -1,0 +1,86 @@
+[
+  {
+    "id": "abertura",
+    "titulo": "Serraria Modelo",
+    "legenda": "Site + sistema de gestão da serraria",
+    "fala": "Este é o novo sistema da Serraria Modelo: um site para atrair clientes, e um sistema completo para controlar a serraria, da compra da tora até a entrega da madeira."
+  },
+  {
+    "id": "hero",
+    "titulo": "Site profissional",
+    "legenda": "Animações próprias e orçamento a um clique",
+    "fala": "A página inicial apresenta a serraria com animações, como esta serra cortando a tora, e leva o cliente direto para o orçamento ou para o WhatsApp."
+  },
+  {
+    "id": "produtos",
+    "titulo": "Produtos em destaque",
+    "legenda": "Pinus e Eucalipto, bitolas, qualidades, paletes e caixotes",
+    "fala": "O visitante conhece os diferenciais, os produtos em Pinus e Eucalipto, com as bitolas e qualidades, e também os paletes e caixotes."
+  },
+  {
+    "id": "contato",
+    "titulo": "Pedidos de orçamento",
+    "legenda": "O formulário do site cai direto no sistema",
+    "fala": "Cada pedido de orçamento feito pelo site chega direto no sistema, para a equipe responder."
+  },
+  {
+    "id": "login",
+    "titulo": "Área restrita",
+    "legenda": "Acesso protegido por usuário e senha",
+    "fala": "A área restrita tem acesso protegido por usuário e senha."
+  },
+  {
+    "id": "painel",
+    "titulo": "Painel da gestão",
+    "legenda": "Faturamento, produção, rendimento e alertas",
+    "fala": "No painel, a gestão vê na hora o faturamento, a madeira vendida e produzida, o rendimento da serraria, as contas a pagar e os alertas do dia."
+  },
+  {
+    "id": "entrada",
+    "titulo": "Entrada de toras",
+    "legenda": "m³, estéreo ou tonelada · cálculo automático",
+    "fala": "Na entrada de toras, cada carga é medida por metro cúbico, estéreo ou tonelada. O sistema calcula o volume e o valor a pagar em tempo real, e registra a data e a hora sozinho."
+  },
+  {
+    "id": "producao",
+    "titulo": "Produção",
+    "legenda": "1,8 × 9 × 1,20 m = 0,001944 m³ por peça",
+    "fala": "Na produção, as peças serradas entram direto no estoque. O sistema calcula o volume de cada bitola e mostra o rendimento da tora consumida."
+  },
+  {
+    "id": "estoque",
+    "titulo": "Estoque",
+    "legenda": "Por bitola e qualidade · alerta de mínimo · histórico",
+    "fala": "O estoque mostra cada bitola por qualidade, com busca por medida, alerta de estoque baixo, e o histórico de cada movimentação. Os paletes e caixotes têm o seu próprio estoque, por unidade."
+  },
+  {
+    "id": "venda",
+    "titulo": "Venda e carga",
+    "legenda": "Madeira por m³ e paletes por unidade na mesma carga",
+    "fala": "Na venda, o endereço de entrega vem do cadastro do cliente, e os itens saem do estoque com o preço da tabela: madeira por metro cúbico e paletes por unidade, na mesma carga."
+  },
+  {
+    "id": "romaneio",
+    "titulo": "Romaneio de carga",
+    "legenda": "PDF pronto para imprimir · NF-e na próxima etapa",
+    "fala": "Ao confirmar, o romaneio de carga é gerado em PDF, pronto para imprimir e assinar. A nota fiscal eletrônica vai ser emitida a partir daqui, na próxima etapa do projeto."
+  },
+  {
+    "id": "relatorios",
+    "titulo": "Relatórios",
+    "legenda": "Filtros e exportação para Excel e PDF",
+    "fala": "Os relatórios de compras, vendas, produção e estoque podem ser filtrados e exportados para Excel e PDF."
+  },
+  {
+    "id": "controle",
+    "titulo": "Orçamentos e auditoria",
+    "legenda": "Resposta pelo WhatsApp · quem fez cada alteração",
+    "fala": "Os orçamentos do site têm resposta rápida pelo WhatsApp, e a auditoria registra quem fez cada alteração, e quando."
+  },
+  {
+    "id": "fechamento",
+    "titulo": "Serraria Modelo",
+    "legenda": "Gestão completa, do pátio ao escritório",
+    "fala": "Tudo em português, com cálculos automáticos, funcionando no computador e no celular. Serraria Modelo: gestão completa, do pátio ao escritório."
+  }
+]

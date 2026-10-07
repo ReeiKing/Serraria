@@ -53,6 +53,18 @@ npm run apresentacao    # gera o build e abre em http://localhost:3000
 
 Feche o `npm run dev` antes, porque os dois usam a porta 3000.
 
+## Vídeo demonstrativo
+
+`apresentacao/demo-serraria-modelo.mp4` (1080p) e `demo-serraria-modelo-whatsapp.mp4` (720p) mostram
+o site e cada módulo com narração e legendas. Para regravar depois de trocar textos ou dados
+(precisa do Google Chrome e de `brew install ffmpeg`; usa a voz "Luciana" do macOS):
+
+```bash
+npm run apresentacao                     # em outro terminal, deixe o site rodando
+python3 scripts/video-demo/montar.py     # falas e legendas em scripts/video-demo/roteiro.json
+npm run db:reset                         # a gravação confirma uma venda de exemplo
+```
+
 ## Como rodar
 
 Requisitos: Node.js 20.9 ou superior, Docker (OrbStack, Docker Desktop ou Colima) e a CLI do
