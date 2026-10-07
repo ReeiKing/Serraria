@@ -7,7 +7,6 @@ import { CartaoIndicador } from "@/components/sistema/cartao-indicador"
 import { Button } from "@/components/ui/button"
 import { comUsuario, entradasToras, especies, fornecedores } from "@/db"
 import { formatMoeda, formatNumero } from "@/lib/format"
-import { SIGLA_UNIDADE } from "@/lib/schemas/entradas"
 
 import { ListaEntradas } from "./lista"
 
@@ -35,10 +34,10 @@ export default async function EntradasPage() {
         .innerJoin(fornecedores, eq(fornecedores.id, entradasToras.fornecedorId))
         .orderBy(desc(entradasToras.createdAt))
         .limit(1000),
-      tx.execute<{ especie: string; unidade: string; saldo: string }>(sql`
-        select e.nome as especie, s.unidade, s.saldo
-          from public.estoque_toras_saldo s join public.especies e on e.id = s.especie_id
-         where s.saldo <> 0 order by e.nome, s.unidade`),
+      // saldo convertido em m³ (estéreo e tonelada pelos fatores da espécie), pois a
+      // produção consome em m³ e somar unidades diferentes daria saldos negativos
+      tx.execute<{ especie: string; saldo_m3: string }>(sql`
+        select especie, saldo_m3 from public.estoque_toras_equivalente order by especie`),
       tx
         .select({
           total: sql<string>`coalesce(sum(${entradasToras.valorTotal} - ${entradasToras.valorPago}), 0)`,
@@ -80,8 +79,8 @@ export default async function EntradasPage() {
             saldos.length ? (
               <span className="flex flex-col text-xl md:text-2xl">
                 {saldos.map((s) => (
-                  <span key={`${s.especie}${s.unidade}`}>
-                    {s.especie}: {formatNumero(s.saldo, 2, 3)} {SIGLA_UNIDADE[s.unidade]}
+                  <span key={s.especie}>
+                    {s.especie}: {formatNumero(s.saldo_m3, 1, 1)} m³
                   </span>
                 ))}
               </span>
@@ -89,7 +88,7 @@ export default async function EntradasPage() {
               "—"
             )
           }
-          detalhe="Compras menos o consumo na produção"
+          detalhe="Compras menos o consumo, em m³ (estéreo e t convertidos)"
         />
         <CartaoIndicador
           titulo="Entradas no mês"

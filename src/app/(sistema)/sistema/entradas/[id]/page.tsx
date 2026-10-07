@@ -19,6 +19,7 @@ import {
 } from "@/db"
 import { formatDataHora, formatM3, formatMoeda, formatNumero, formatPlaca } from "@/lib/format"
 import { MODOS_MEDICAO, SIGLA_UNIDADE } from "@/lib/schemas/entradas"
+import { cn } from "@/lib/utils"
 
 import { AcoesEntrada, Pagamentos } from "./cliente"
 
@@ -144,15 +145,24 @@ export default async function EntradaPage({ params }: { params: Promise<{ id: st
           </span>
           <div className="h-px bg-white/20" />
           <span className="text-primary-foreground/70 text-sm">Total</span>
-          <span className="font-heading text-3xl font-semibold tabular-nums">
+          <span
+            className={cn(
+              "font-heading text-3xl font-semibold tabular-nums",
+              e.statusPagamento === "pago" && "text-emerald-300"
+            )}
+          >
             {formatMoeda(e.valorTotal)}
           </span>
-          <div className="flex items-center gap-2">
-            <BadgePagamento status={e.statusPagamento} />
-            {restante > 0 && (
-              <span className="text-primary-foreground/80 text-sm">
-                falta {formatMoeda(restante)}
-              </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <BadgePagamento status={e.statusPagamento} forte />
+            {e.statusPagamento === "pago" ? (
+              <span className="text-sm font-medium text-emerald-200">quitado</span>
+            ) : (
+              restante > 0 && (
+                <span className="text-primary-foreground/90 text-sm">
+                  falta <b className="text-amber-300">{formatMoeda(restante)}</b>
+                </span>
+              )
             )}
           </div>
         </div>
